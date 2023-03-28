@@ -1,4 +1,4 @@
-# MultiResolutionCameras
+# Multi-Resolution Cameras for Blender
 This is a minimal Blender add-on written to easily customize resolutions and render your cameras.
 
 After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
