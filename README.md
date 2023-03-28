@@ -37,7 +37,13 @@ There is also two buttons:
 
 Using this button will render in the custom resolution is one is set, othewise default resolution will be used.
 
-Please note that changing the scene resolution will **not** automatically update the cameras with default resolution.
+Please note that changing the scene resolution will **not** automatically update the cameras with default resolution. Tap the wrench of the cameras that you want to update after a scene resolution change.
+
+## How It Works
+
+The plugin appends a property group (a data struct) to your file for each camera. The property group contains the name of the camera, index; X and Y dimensions, as well as the state of the checkbox. In other words, your file size will not be notably affected by the additional data.
+
+When you save the file, the data is retained—even if you uninstall the add-on. The data becomes part of the file. So you can share the file with others, and as long as they have the add-on installed, they will be able to render the different camera sizes.
 
 Thanks for checking out my first add-on for Blender. I hope you find it useful!
 
