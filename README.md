@@ -3,7 +3,8 @@ This is a minimal Blender add-on written to easily customize resolutions and ren
 
 After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
 
-<img width="315" alt="Screenshot 2023-03-28 at 02 35 47" src="https://user-images.githubusercontent.com/326334/228104087-8b21a2e2-7abe-4366-97d7-7498eb12ed11.png">
+![Screenshot with description](https://user-images.githubusercontent.com/326334/228189609-965fa14a-639b-4da3-8d54-36f8035bc1b8.png)
+
 
 ## Installation
 
