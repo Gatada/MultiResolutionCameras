@@ -10,6 +10,7 @@ bl_info = {
 
 import bpy
 import os
+from bpy.app.handlers import persistent
 
 
 class CameraListProperties(bpy.types.PropertyGroup):
@@ -115,8 +116,11 @@ class CameraListPanel(bpy.types.Panel):
 		cameras = scene.cameras
 		camera_list = scene.camera_list
 	
+		# The List of Cameras
+		
 		row = layout.row()
 		row.template_list("CAMERA_UL_custom_resolution_camera_list", "", scene, "cameras", camera_list, "highlighted_camera_index", rows=10)
+			
 	
 		if len(cameras) > 0:
 			selected_camera = bpy.data.objects.get(cameras[camera_list.highlighted_camera_index].name)
@@ -130,7 +134,10 @@ class CameraListPanel(bpy.types.Panel):
 				row.prop(selected_camera, '["y_dim"]', text="Y")
 				row.operator("camera_list.reset_y_dimension", text="", icon='LOOP_BACK')
 		else:
-			layout.label(text="No cameras available")
+			# Draw the update button spanning two columns
+			row = layout.row(align=True)
+			row.scale_y = 2
+			row.operator("scene.update_camera_list_operator", text="Refresh Camera List")
 	
 		row = layout.row(align=True)
 		row.operator("camera_list.button_1", text="Selected", icon="OUTPUT")
@@ -186,6 +193,21 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 
+class UpdateCameraListOperator(bpy.types.Operator):
+	bl_idname = "scene.update_camera_list_operator"
+	bl_label = "Update Camera List"
+
+	scene_name = bpy.props.StringProperty()
+
+	def execute(self, context):
+		scene = bpy.context.scene
+		if scene is not None:
+			update_camera_list(scene, depsgraph=None)
+		return {'FINISHED'}
+
+
+
+
 class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 	bl_idname = "camera_list.toggle_use_camera"
 	bl_label = "Toggle Selection"
@@ -236,8 +258,6 @@ class CAMERA_LIST_OT_render_custom_resolution(bpy.types.Operator):
 	
 				# Set the active camera to the selected camera
 				context.scene.camera = camera
-				print(f"Active camera: {camera.name}") # Debug statement
-
 	
 				# Render the image
 				bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
@@ -406,8 +426,8 @@ class CAMERA_LIST_OT_EntryButton1(bpy.types.Operator):
 
 
 
-
-def update_camera_list(scene):
+@persistent
+def update_camera_list(scene, depsgraph=None):
 	scene.cameras.clear()
 	for obj in scene.objects:
 		if obj.type == 'CAMERA':
@@ -419,6 +439,7 @@ def update_camera_list(scene):
 
 			if "y_dim" not in obj.keys():
 				obj["y_dim"] = bpy.context.scene.render.resolution_y
+
 
 
 
@@ -435,6 +456,7 @@ classes = (
 	CAMERA_LIST_OT_ResetYDimension,
 	CAMERA_LIST_OT_toggle_use_camera,
 	CAMERA_LIST_OT_render_custom_resolution,
+	UpdateCameraListOperator,
 )
 
 
@@ -443,8 +465,13 @@ classes = (
 def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
+
 	bpy.types.Scene.camera_list = bpy.props.PointerProperty(type=CameraListProperties)
-	bpy.types.Scene.cameras = bpy.props.CollectionProperty(type=CameraItemProperties)
+
+	bpy.types.Scene.cameras = bpy.props.CollectionProperty(
+		type=CameraItemProperties,
+		 description="List of cameras in the scene")
+	
 	bpy.app.handlers.depsgraph_update_post.append(update_camera_list)
 
 
