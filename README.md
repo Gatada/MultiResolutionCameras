@@ -5,6 +5,17 @@ After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
 
 <img width="315" alt="Screenshot 2023-03-28 at 02 35 47" src="https://user-images.githubusercontent.com/326334/228104087-8b21a2e2-7abe-4366-97d7-7498eb12ed11.png">
 
+## Installation
+
+To install this add-on please follow these steps:
+
+1. Download.
+1. Open Blender Preferences (CMD+comma on MacOS).
+1. Go to the Add-ons tab and click Install.
+1. Browse to the downloaded python script and select it.
+1. Enable the script, it is called: 3D View: Multi-Resolution Cameras.
+
+
 ## Quick Overview
 
 For each camera row you will find:
