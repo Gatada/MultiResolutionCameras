@@ -1,16 +1,35 @@
+# THE MULTI-RESOLUTION CAMERA ADD-ON
+#
+# Developed in March 2023 by Johan Basberg
+#
+# This version of the script adds a rendering outline to the customized camera.
+# Without that mesh, you will not be able to see exactly what will be rendered.
+#
+# I hope you enjoy this add-on, cause I spent a lot of time developing it.
+# Give me a shout-out on Twitter if you find it useful: @johanhwb
+#
+# Enjoy!
+# Johan
+
+
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (1, 1),
+	"version": (2, 5),
 	"blender": (3, 0, 0),
 	"location": "View3D > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
 	"category": "3D View",
 }
 
+import math
 import bpy
 import os
 from bpy.app.handlers import persistent
+
+
+key_mesh = "Multi-Resolution Camera Mesh"
+key_passepartout = "Multi-Resolution Camera Frame"
 
 
 class CameraListProperties(bpy.types.PropertyGroup):
@@ -185,6 +204,12 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				render_op = row.operator("camera_list.render_custom_resolution", text="", icon='RENDER_STILL', emboss=False)
 				render_op.camera_name = camera.name
 				
+								
+				# Add operator to select camera and set it as the current rendering camera when the row is clicked
+				camera_select_op = row.operator("camera_list.select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
+				camera_select_op.camera_name = camera.name
+				camera_select_op.row_index = index
+				
 
 		elif self.layout_type in {'GRID'}:
 			layout.alignment = 'CENTER'
@@ -193,6 +218,35 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 
+class CAMERA_OT_select_camera(bpy.types.Operator):
+	bl_idname = "camera_list.select_camera"
+	bl_label = "Select Camera"
+
+	camera_name: bpy.props.StringProperty(name="Camera Name")
+	row_index: bpy.props.IntProperty()
+	
+	def execute(self, context):
+
+		# Highlighting clicked row
+		bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
+
+	
+		camera = bpy.data.objects.get(self.camera_name)
+		if camera is not None:
+		
+			# Select the camera in the scene
+			bpy.ops.object.select_all(action='DESELECT')
+			camera.select_set(True)
+			context.view_layer.objects.active = camera
+			
+			# Set the camera as the current rendering camera
+			context.scene.camera = camera
+
+		return {'FINISHED'}
+		
+		
+		
+		
 class UpdateCameraListOperator(bpy.types.Operator):
 	bl_idname = "scene.update_camera_list_operator"
 	bl_label = "Update Camera List"
@@ -444,6 +498,97 @@ def update_camera_list(scene, depsgraph=None):
 
 
 
+def resize_passepartout(camera, width, height):
+	camera_front_plane_distance = 0.25 # 0.5 is right at the front plane of the camera mesh
+
+	if height > width:
+		render_size_ratio = width / height
+		aspect_ratio = bpy.context.scene.render.resolution_x / bpy.context.scene.render.resolution_y
+	else:
+		render_size_ratio = height / width
+		aspect_ratio = bpy.context.scene.render.resolution_y / bpy.context.scene.render.resolution_x
+
+	half_width = camera_front_plane_distance
+	half_height = camera_front_plane_distance * render_size_ratio
+
+	vFOV = 2 * math.atan(math.tan(camera.data.angle / 2))
+
+	# Calculate the optimal distance using the camera's vFOV and half_height
+	optimal_distance = half_width / math.tan(vFOV / 2)
+
+	# Ensure the optimal distance is within the camera's clip range
+	distance = max(camera.data.clip_start, min(optimal_distance, camera.data.clip_end))
+
+	verts = [
+		(-half_width, -half_height, -distance),  # Make the Z coordinate negative
+		(half_width, -half_height, -distance),  # Make the Z coordinate negative
+		(half_width, half_height, -distance),  # Make the Z coordinate negative
+		(-half_width, half_height, -distance),  # Make the Z coordinate negative
+	]
+
+	edges = [(0, 1), (1, 2), (2, 3), (3, 0)]
+	faces = []
+
+	mesh = bpy.data.meshes.get(key_mesh)
+	if mesh is None:
+		mesh = bpy.data.meshes.new(key_mesh)
+	else:
+		mesh.clear_geometry()
+	
+	mesh.from_pydata(verts, edges, faces)
+	mesh.update()
+	
+	passepartout = bpy.data.objects.get(key_passepartout)
+	if passepartout is None:
+		passepartout = bpy.data.objects.new(key_passepartout, mesh)
+		bpy.context.collection.objects.link(passepartout)
+	
+	passepartout.data = mesh
+
+	passepartout.parent = camera
+	passepartout.hide_render = True
+	passepartout.hide_select = True
+	
+	return passepartout
+
+
+
+def update_multiresolution_camera_frame(scene):
+	# Get the active object and check if it is a camera
+	active_object = bpy.context.active_object
+
+	# Get existing passepartout, if there is one
+	passepartout = bpy.data.objects.get(key_passepartout)
+	
+	if active_object and active_object.type == 'CAMERA':
+		selected_camera = active_object
+
+		# Check if the selected camera is in the list of cameras with custom dimensions
+		custom_camera = bpy.context.scene.cameras.get(selected_camera.name)
+		if custom_camera and (custom_camera.x_dim != bpy.context.scene.render.resolution_x or custom_camera.y_dim != bpy.context.scene.render.resolution_y):
+			# Show the passepartout for the active camera
+			passepartout = resize_passepartout(selected_camera, custom_camera.x_dim, custom_camera.y_dim)
+			passepartout.hide_viewport = False
+		else:
+			# Hide the passepartout if the selected camera does not have custom dimensions
+			if passepartout:
+				passepartout.hide_viewport = True
+			
+					
+		# Link the passepartout to the selected camera
+		if passepartout:
+			passepartout.parent = selected_camera
+			passepartout.matrix_world = selected_camera.matrix_world
+
+	else:
+		# Hide the passepartout if no camera is selected
+		if passepartout:
+			passepartout.hide_viewport = True
+
+
+
+
+
 classes = (
 	CameraListProperties,
 	CameraItemProperties,
@@ -457,6 +602,7 @@ classes = (
 	CAMERA_LIST_OT_toggle_use_camera,
 	CAMERA_LIST_OT_render_custom_resolution,
 	UpdateCameraListOperator,
+	CAMERA_OT_select_camera,
 )
 
 
@@ -471,7 +617,25 @@ def register():
 	bpy.types.Scene.cameras = bpy.props.CollectionProperty(
 		type=CameraItemProperties,
 		 description="List of cameras in the scene")
+		 
+	bpy.types.Scene.passepartout_width = bpy.props.IntProperty(
+		name="Width",
+		description="Passepartout width",
+		default=500,
+		min=1,
+		soft_max=10000
+	)
 	
+	bpy.types.Scene.passepartout_height = bpy.props.IntProperty(
+		name="Height",
+		description="Passepartout height",
+		default=300,
+		min=1,
+		soft_max=10000
+	)
+	
+		# Register the depsgraph update handler
+	bpy.app.handlers.depsgraph_update_post.append(update_multiresolution_camera_frame)
 	bpy.app.handlers.depsgraph_update_post.append(update_camera_list)
 
 
@@ -482,6 +646,15 @@ def unregister():
 		bpy.utils.unregister_class(cls)
 	del bpy.types.Scene.camera_list
 	del bpy.types.Scene.cameras
+	
+	# Try to remove the passepartout
+	passepartout = bpy.data.objects.get(key_passepartout)
+	if passepartout:
+		# Delete passepartout from the scene
+		bpy.data.objects.remove(passepartout, do_unlink=True)
+	
+	# Unregister the depsgraph update handler
+	bpy.app.handlers.depsgraph_update_post.remove(update_multiresolution_camera_frame)	
 	bpy.app.handlers.depsgraph_update_post.remove(update_camera_list)
 
 
