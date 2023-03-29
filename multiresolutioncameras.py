@@ -497,7 +497,7 @@ def update_camera_list(scene, depsgraph=None):
 
 
 
-
+@persistent
 def resize_passepartout(camera, width, height):
 	camera_front_plane_distance = 0.25 # 0.5 is right at the front plane of the camera mesh
 
