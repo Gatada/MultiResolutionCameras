@@ -3,7 +3,10 @@ This is a minimal Blender add-on written to easily customize resolutions and ren
 
 After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
 
-![Screenshot with description](https://user-images.githubusercontent.com/326334/228189609-965fa14a-639b-4da3-8d54-36f8035bc1b8.png)
+![Screenshot with description](https://user-images.githubusercontent.com/326334/228645299-c2b59de0-ee83-4c94-b69a-6be764af0882.png)
+
+
+![Custom Camera Resolution](https://user-images.githubusercontent.com/326334/228645249-619cb3b0-3934-496a-b817-aeb84345221b.png)
 
 
 ## Installation
@@ -27,6 +30,7 @@ For each camera row you will find:
 2. The name of the camera.
 3. The wrench is filled when the camera has a custom resolution. Click it to restore default scene resolution.
 4. The Render Still button will render the camera to `Blender Render` window in the current slot.
+5. The Scene Camera: click it to make the camera the Scene Camera, allowing you to adjust the rendered image dimensions in real-time. This is the killer feature. Very happy I managed to add this exactly as I wanted it to work.
 
 Below the list you can click to edit or slide to adjust the resolution of the highlighted camera.
 
