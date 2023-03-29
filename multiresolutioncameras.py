@@ -499,7 +499,7 @@ def update_camera_list(scene, depsgraph=None):
 
 
 def resize_passepartout(camera, width, height):
-	camera_front_plane_distance = 0.25 # 0.5 is right at the front plane of the camera mesh
+	camera_front_plane_distance = 0.5 # 0.5 is right at the front plane of the camera mesh
 
 	if height > width:
 		render_size_ratio = width / height
