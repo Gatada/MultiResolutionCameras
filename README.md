@@ -61,9 +61,3 @@ I hope you find it useful!
 
 All the best!\
 Johan
-
-# The Future
-
-I have tried multiple approaches to adding a mesh to the selected camera that shows the resolution of the camera, if it has been customized, but so far—all my attempts have been to no avail. The mest just doesn't show up in the 3D Viewport.
-
-If you can help, please get in touch!
