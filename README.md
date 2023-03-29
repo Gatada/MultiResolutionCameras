@@ -1,9 +1,15 @@
 # Multi-Resolution Cameras for Blender
-This is a minimal Blender add-on written to easily customize resolutions and render your cameras.
+This is a Blender add-on written to easily customize render resolutions, and render your cameras. With the add-on you can:
 
-After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
+* Set a custom render resolution for the cameras in the scene, without impacting the scene rendering resolution/aspect.
+* Easily render a still for a camera with the custom resolution.
 
-![Screenshot with description](https://user-images.githubusercontent.com/326334/228645299-c2b59de0-ee83-4c94-b69a-6be764af0882.png)
+But what makes the add-on cool is that you can preview the render right there in the viewport, as a frame is added to the camera which updates in real-time while you adjust the size and ratio of the render.
+
+It is a single file add-on. After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
+
+
+![Feature Overview](https://user-images.githubusercontent.com/326334/228676238-09964662-3a0f-4cdf-ab00-4d49347428d7.png)
 
 
 ![Custom Camera Resolution](https://user-images.githubusercontent.com/326334/228645249-619cb3b0-3934-496a-b817-aeb84345221b.png)
@@ -49,7 +55,9 @@ The plugin appends a property group (a data struct) to your file for each camera
 
 When you save the file, the data is retained—even if you uninstall the add-on. The data becomes part of the file. So you can share the file with others, and as long as they have the add-on installed, they will be able to render the different camera sizes.
 
-Thanks for checking out my first add-on for Blender. I hope you find it useful!
+Thanks for checking out my first add-on for Blender. It took an entire week to make, and it turned into everything I wanted it to be. I'm very happy about it.
+
+I hope you find it useful!
 
 All the best!\
 Johan
