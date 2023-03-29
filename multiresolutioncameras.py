@@ -256,7 +256,7 @@ class UpdateCameraListOperator(bpy.types.Operator):
 	def execute(self, context):
 		scene = bpy.context.scene
 		if scene is not None:
-			update_camera_list(scene, depsgraph=None)
+			update_camera_list(scene)
 		return {'FINISHED'}
 
 
@@ -497,7 +497,7 @@ def update_camera_list(scene, depsgraph=None):
 
 
 
-@persistent
+
 def resize_passepartout(camera, width, height):
 	camera_front_plane_distance = 0.25 # 0.5 is right at the front plane of the camera mesh
 
@@ -553,6 +553,7 @@ def resize_passepartout(camera, width, height):
 
 
 
+@persistent
 def update_multiresolution_camera_frame(scene):
 	# Get the active object and check if it is a camera
 	active_object = bpy.context.active_object
