@@ -121,7 +121,7 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 
 
 
-class CameraListPanel(bpy.types.Panel):
+class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 	bl_label = "Camera List"	
 	bl_idname = "VIEW3D_PT_camera_list"
 	bl_space_type = 'VIEW_3D'
@@ -159,8 +159,8 @@ class CameraListPanel(bpy.types.Panel):
 			row.operator("scene.update_camera_list_operator", text="Refresh Camera List")
 	
 		row = layout.row(align=True)
-		row.operator("render.selected_cameras", text="Selected", icon="OUTPUT")
-		row.operator("render.all_cameras", text="Render All")
+		row.operator("render.confirm_dialog_selected_cameras", text="Selected", icon="OUTPUT")
+		row.operator("render.confirm_dialog_all_cameras", text="Render All")
 
 
 
@@ -175,8 +175,7 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				# CHECKBOX: Toggles the selected state of a camera, allowing user to decide to include or exclude it from Render Selected
 
 				use_camera_icon = 'CHECKBOX_HLT' if camera.use_camera else 'CHECKBOX_DEHLT'
-				toggle_op = row.operator("camera_list.toggle_use_camera", text="", icon=use_camera_icon, emboss=False)
-				toggle_op.camera_name = item.name
+				row.operator("camera_list.toggle_use_camera", text="", icon=use_camera_icon, emboss=False).camera_name = item.name
 
 
 				# NAME: Name of the camera
@@ -196,17 +195,17 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				modifier_icon = 'MODIFIER_ON' if custom_dimensions else 'MODIFIER_OFF'
 
 				# Pass the index of the current row to the entry button operator
-				row.operator("camera_list.entry_button_1", text="", icon=modifier_icon, emboss=False).camera_index = index
+				row.operator("camera_list.clear_scene_resolution", text="", icon=modifier_icon, emboss=False).camera_index = index
 				
 
 				# RENDER STILL: render the camera to the Render Viewer using custom resolution—if there is one.
 					
-				render_op = row.operator("camera_list.render_custom_resolution", text="", icon='RENDER_STILL', emboss=False)
+				render_op = row.operator("render.render_still_with_custom_resolution", text="", icon='RENDER_STILL', emboss=False)
 				render_op.camera_name = camera.name
 				
 								
 				# Add operator to select camera and set it as the current rendering camera when the row is clicked
-				camera_select_op = row.operator("camera_list.select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
+				camera_select_op = row.operator("scene.select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
 				camera_select_op.camera_name = camera.name
 				camera_select_op.row_index = index
 				
@@ -218,8 +217,8 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 
-class CAMERA_OT_select_camera(bpy.types.Operator):
-	bl_idname = "camera_list.select_camera"
+class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
+	bl_idname = "scene.select_camera"
 	bl_label = "Select Camera"
 
 	camera_name: bpy.props.StringProperty(name="Camera Name")
@@ -243,20 +242,20 @@ class CAMERA_OT_select_camera(bpy.types.Operator):
 			context.scene.camera = camera
 			
 			if camera.scale.x != camera.scale.y != camera.scale.z:
-				self.report({'WARNING'}, f"Non-uniform camera scale affects the Multi-Camera Render Border and rendering result.")
+				self.report({'WARNING'}, "Non-uniform camera scale affects the Multi-Camera Render Border and rendering result.")
 			elif camera.scale.x < 0.073 and camera.data.clip_start < 0.1:
-				self.report({'WARNING'}, f"Current camera scale and clip start settings might hide the Multi-Camera Render Border.")
+				self.report({'WARNING'}, "Current camera scale and clip start settings might hide the Multi-Camera Render Border.")
 			elif camera.data.clip_start > 1.37:
-				self.report({'WARNING'}, f"Current camera Clip Start setting degrades the visibility of the Multi-Camera Render Border.")
+				self.report({'WARNING'}, "Current camera Clip Start setting degrades the visibility of the Multi-Camera Render Border.")
 			elif camera.data.clip_end < 1.38:
-				self.report({'WARNING'}, f"Current camera Clip End will hide the Multi-Camera Render Border.")
+				self.report({'WARNING'}, "Current camera Clip End will hide the Multi-Camera Render Border.")
 
 		return {'FINISHED'}
 		
 		
 		
 		
-class UpdateCameraListOperator(bpy.types.Operator):
+class CAMERA_LIST_OT_update_camera_list(bpy.types.Operator):
 	bl_idname = "scene.update_camera_list_operator"
 	bl_label = "Update Camera List"
 
@@ -285,12 +284,30 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 			camera.use_camera = not camera.use_camera
 			context.area.tag_redraw()
 		return {'FINISHED'}
+	
+	def invoke(self, context, event):
+		if event.alt:
+			# Toggle selection state to all cameras
+			camera = bpy.data.objects.get(self.camera_name)
+			if camera is not None:
+				camera.use_camera = not camera.use_camera
+				new_toggle_state = camera.use_camera
+
+				for cam in context.scene.cameras:
+					camera = bpy.data.objects.get(cam.name)
+					camera.use_camera = new_toggle_state
+			
+				context.area.tag_redraw()
+			return {'FINISHED'}
+		
+		else:
+			self.report({'INFO'}, "You can Opt+Click / Alt+Click to toggle all cameras.")
+			return self.execute(context)
 
 
 
-
-class CAMERA_LIST_OT_render_custom_resolution(bpy.types.Operator):
-	bl_idname = "camera_list.render_custom_resolution"
+class RENDER_OT_render_custom_resolution(bpy.types.Operator):
+	bl_idname = "render.render_still_with_custom_resolution"
 	bl_label = "Render Camera"
 	bl_description = "Will use Costum Resolution if set"
 
@@ -321,6 +338,8 @@ class CAMERA_LIST_OT_render_custom_resolution(bpy.types.Operator):
 	
 				# Set the active camera to the selected camera
 				context.scene.camera = camera
+	
+				self.report({'INFO'}, f"Rendering {camera.name} - interface will become more or less unresponsive.")
 	
 				# Render the image
 				bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
@@ -476,8 +495,8 @@ class RENDER_OT_render_all_cameras(bpy.types.Operator):
 
 
 
-class CAMERA_LIST_OT_EntryButton1(bpy.types.Operator):
-	bl_idname = "camera_list.entry_button_1"
+class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
+	bl_idname = "camera_list.clear_scene_resolution"
 	bl_label = "Clear Custom Dimensions"
 	bl_description = "Restores the camera to default dimensions"
 	bl_options = {'UNDO'}
@@ -486,37 +505,60 @@ class CAMERA_LIST_OT_EntryButton1(bpy.types.Operator):
 	camera_index: bpy.props.IntProperty(default=0)
 
 	def execute(self, context):
-		camera = context.scene.cameras[self.camera_index]
+		camera_item = context.scene.cameras[self.camera_index]
 
-		if camera:
+		if camera_item:
 		
 			# Modify the X and Y dimensions
-			camera.x_dim = context.scene.render.resolution_x
-			camera.y_dim = context.scene.render.resolution_y
+			camera_item.set_x_dim = None
+			camera_item.set_y_dim = None
 			
-			self.report({'INFO'}, f"Successfully reset {camera.name} to {camera.x_dim}×{camera.y_dim}")
+			self.report({'INFO'}, f"Successfully reset {camera_item.name} to {camera_item.x_dim}×{camera_item.y_dim}")
 
 		return {'FINISHED'}
 
 
+	def invoke(self, context, event):
+		if event.alt:
+			# Clear custom resolution from all cameras
+			for cam in context.scene.cameras:
+				camera = bpy.data.objects.get(cam.name)
+				camera.set_x_dim = None
+				camera.set_y_dim = None
+		
+			context.area.tag_redraw()
+			return {'FINISHED'}
+		
+		else:
+			self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
+			return self.execute(context)
+
 
 
 # Confirmation dialog box
-class RENDER_OT_confirm_dialog(bpy.types.Operator):
-    bl_idname = "render.confirm_dialog"
-    bl_label = "Start Rendering?"
+class RENDER_OT_confirm_dialog_render_all(bpy.types.Operator):
+	bl_idname = "render.confirm_dialog_all_cameras"
+	bl_label = "Start rendering all cameras?"
 
-    render_method: bpy.props.StringProperty()
+	def execute(self, context):
+		bpy.ops.render.all_cameras()
+		return {'FINISHED'}
 
-    def execute(self, context):
-        if self.render_method == "selected_cameras":
-            bpy.ops.render.render_selected_cameras()
-        elif self.render_method == "all_cameras":
-            bpy.ops.render.render_all_cameras()
-        return {'FINISHED'}
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
-    def invoke(self, context, event):
-        return context.window_manager.invoke_props_dialog(self)
+
+# Confirmation dialog box
+class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
+	bl_idname = "render.confirm_dialog_selected_cameras"
+	bl_label = "Start rendering selected cameras?"
+
+	def execute(self, context):
+		bpy.ops.render.selected_cameras()
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return context.window_manager.invoke_props_dialog(self)
 
 
 
@@ -654,19 +696,22 @@ def update_multiresolution_camera_frame(scene):
 classes = (
 	CameraListProperties,
 	CameraItemProperties,
-	CameraListPanel,
+
+	CAMERA_LIST_PT_render_panel,
 	CAMERA_UL_custom_resolution_camera_list,
-	RENDER_OT_render_selected_cameras,
-	RENDER_OT_render_all_cameras,
-	CAMERA_LIST_OT_EntryButton1,
+	
+	CAMERA_LIST_OT_clear_custom_resolution,
 	CAMERA_LIST_OT_ResetXDimension,
 	CAMERA_LIST_OT_ResetYDimension,
 	CAMERA_LIST_OT_toggle_use_camera,
-	CAMERA_LIST_OT_render_custom_resolution,
-	UpdateCameraListOperator,
-	CAMERA_OT_select_camera,
-	RENDER_OT_confirm_dialog,
-	RENDER_OT_render_with_confirmation,
+	CAMERA_LIST_OT_select_camera,
+	CAMERA_LIST_OT_update_camera_list,
+
+	RENDER_OT_render_selected_cameras,
+	RENDER_OT_render_all_cameras,
+	RENDER_OT_render_custom_resolution,
+	RENDER_OT_confirm_dialog_render_all,
+	RENDER_OT_confirm_dialog_render_selected,
 )
 
 
@@ -680,7 +725,7 @@ def register():
 
 	bpy.types.Scene.cameras = bpy.props.CollectionProperty(
 		type=CameraItemProperties,
-		 description="List of cameras in the scene")
+		 description="List of cameras properties in the scene")
 		 
 	bpy.types.Scene.passepartout_width = bpy.props.IntProperty(
 		name="Width",
