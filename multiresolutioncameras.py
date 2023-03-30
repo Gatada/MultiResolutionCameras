@@ -241,6 +241,15 @@ class CAMERA_OT_select_camera(bpy.types.Operator):
 			
 			# Set the camera as the current rendering camera
 			context.scene.camera = camera
+			
+			if camera.scale.x != camera.scale.y != camera.scale.z:
+				self.report({'WARNING'}, f"Non-uniform camera scale affects the Multi-Camera Render Border and rendering result.")
+			elif camera.scale.x < 0.073 and camera.data.clip_start < 0.1:
+				self.report({'WARNING'}, f"Current camera scale and clip start settings might hide the Multi-Camera Render Border.")
+			elif camera.data.clip_start > 1.37:
+				self.report({'WARNING'}, f"Current camera Clip Start setting degrades the visibility of the Multi-Camera Render Border.")
+			elif camera.data.clip_end < 1.38:
+				self.report({'WARNING'}, f"Current camera Clip End will hide the Multi-Camera Render Border.")
 
 		return {'FINISHED'}
 		
@@ -499,25 +508,45 @@ def update_camera_list(scene, depsgraph=None):
 
 
 def resize_passepartout(camera, width, height):
-	camera_front_plane_distance = 0.5 # 0.5 is right at the front plane of the camera mesh
 
-	if height > width:
-		render_size_ratio = width / height
-		aspect_ratio = bpy.context.scene.render.resolution_x / bpy.context.scene.render.resolution_y
+	# A factor that results in the correct placement of the render border
+	# exactly at the front plane of the camera object.
+	factor = 0.5
+
+	# The ratio is used to scale the rendering border, as the shortest side
+	# should match the same edge of the FOV.
+	render_ratio = height/width
+	
+	# Scaling the sides to match behavior of Blender, so the rendering border
+	# ends up showing what will actually be rendered.
+	if render_ratio > 1:
+		half_width = factor / render_ratio
+		half_height = factor
 	else:
-		render_size_ratio = height / width
-		aspect_ratio = bpy.context.scene.render.resolution_y / bpy.context.scene.render.resolution_x
+		half_width = factor
+		half_height = factor * render_ratio
 
-	half_width = camera_front_plane_distance
-	half_height = camera_front_plane_distance * render_size_ratio
-
-	vFOV = 2 * math.atan(math.tan(camera.data.angle / 2))
-
-	# Calculate the optimal distance using the camera's vFOV and half_height
-	optimal_distance = half_width / math.tan(vFOV / 2)
-
-	# Ensure the optimal distance is within the camera's clip range
-	distance = max(camera.data.clip_start, min(optimal_distance, camera.data.clip_end))
+	# Calculate the optimal distance using the camera's FOV
+	optimal_distance = factor / math.tan(camera.data.angle / 2)
+	distance = max(camera.data.clip_start, optimal_distance)
+	
+	# Scaling render border according to distance, so it always looks same same in view finder.
+	if distance > optimal_distance:
+		half_width = half_width * (distance / optimal_distance)
+		half_height = half_height * (distance / optimal_distance)
+	
+	# Somehow the clip start, camera object scale affects optimal distance for the render border.
+	# How to ensure the optimal distance is within the camera's scaled clip range?
+	#
+	# What I have observed:
+	#
+	# • The camera object scale affects clip start
+	# • Default clip start is 0.1
+	# • Default camera object scale is 1
+	# • At a camera object scale lower than 0.072012 the render border is clipped (hidden)
+	# • Distance from position to camera and render border is 1.3888889188714615 which is also relative to camera object scale
+	#
+	# For now, I'll just issue a warning when camera is selected.
 
 	verts = [
 		(-half_width, -half_height, -distance),  # Make the Z coordinate negative
