@@ -159,8 +159,8 @@ class CameraListPanel(bpy.types.Panel):
 			row.operator("scene.update_camera_list_operator", text="Refresh Camera List")
 	
 		row = layout.row(align=True)
-		row.operator("camera_list.button_1", text="Selected", icon="OUTPUT")
-		row.operator("camera_list.button_2", text="Render All")
+		row.operator("render.selected_cameras", text="Selected", icon="OUTPUT")
+		row.operator("render.all_cameras", text="Render All")
 
 
 
@@ -342,8 +342,8 @@ class CAMERA_LIST_OT_render_custom_resolution(bpy.types.Operator):
 
 
 
-class CAMERA_LIST_OT_Button1(bpy.types.Operator):
-	bl_idname = "camera_list.button_1"
+class RENDER_OT_render_selected_cameras(bpy.types.Operator):
+	bl_idname = "render.selected_cameras"
 	bl_label = "Render Selected Cameras"
 	bl_description = "Render selected cameras"	
 	
@@ -367,6 +367,9 @@ class CAMERA_LIST_OT_Button1(bpy.types.Operator):
 			file_dir = bpy.path.abspath("//")
 		file_name = os.path.splitext(os.path.basename(file_path))[0]
 		
+		render_progress = 0
+		cameras_to_render = len(selected_cameras)
+
 		for camera_data in selected_cameras:
 			camera = bpy.data.objects.get(camera_data.name)
 			if not camera:
@@ -383,6 +386,9 @@ class CAMERA_LIST_OT_Button1(bpy.types.Operator):
 			# set output path
 			camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
 			scene.render.filepath = bpy.path.ensure_ext(camera_file_path, ".png")
+			
+			self.report({'INFO'}, f"Rendering {render_progress} of {cameras_to_render}: {camera.name} - interface will become more or less unresponsive.")
+
 			
 			# render
 			bpy.ops.render.render(write_still=True)
@@ -406,8 +412,8 @@ class CAMERA_LIST_OT_Button1(bpy.types.Operator):
 
 
 
-class CAMERA_LIST_OT_Button2(bpy.types.Operator):
-	bl_idname = "camera_list.button_2"
+class RENDER_OT_render_all_cameras(bpy.types.Operator):
+	bl_idname = "render.all_cameras"
 	bl_label = "Render All Cameras"
 	bl_description = "Renders all cameras with custom resolution if set"
 
@@ -427,6 +433,9 @@ class CAMERA_LIST_OT_Button2(bpy.types.Operator):
 		file_dir = os.path.dirname(file_path)
 		if not file_dir:
 			file_dir = bpy.path.abspath("//")
+			
+		render_progress = 0
+		cameras_to_render = len(scene.cameras)
 
 		# Render each camera with custom resolution, or default resolution if not set
 		for camera_data in scene.cameras:
@@ -446,6 +455,8 @@ class CAMERA_LIST_OT_Button2(bpy.types.Operator):
 			# set output path
 			camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
 			scene.render.filepath = bpy.path.ensure_ext(camera_file_path, ".png")
+			
+			self.report({'INFO'}, f"Rendering {render_progress} of {cameras_to_render}: {camera.name} - interface will become more or less unresponsive.")
 			
 			# render
 			bpy.ops.render.render(write_still=True)
@@ -486,6 +497,27 @@ class CAMERA_LIST_OT_EntryButton1(bpy.types.Operator):
 			self.report({'INFO'}, f"Successfully reset {camera.name} to {camera.x_dim}×{camera.y_dim}")
 
 		return {'FINISHED'}
+
+
+
+
+# Confirmation dialog box
+class RENDER_OT_confirm_dialog(bpy.types.Operator):
+    bl_idname = "render.confirm_dialog"
+    bl_label = "Start Rendering?"
+
+    render_method: bpy.props.StringProperty()
+
+    def execute(self, context):
+        if self.render_method == "selected_cameras":
+            bpy.ops.render.render_selected_cameras()
+        elif self.render_method == "all_cameras":
+            bpy.ops.render.render_all_cameras()
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return context.window_manager.invoke_props_dialog(self)
+
 
 
 
@@ -624,8 +656,8 @@ classes = (
 	CameraItemProperties,
 	CameraListPanel,
 	CAMERA_UL_custom_resolution_camera_list,
-	CAMERA_LIST_OT_Button1,
-	CAMERA_LIST_OT_Button2,
+	RENDER_OT_render_selected_cameras,
+	RENDER_OT_render_all_cameras,
 	CAMERA_LIST_OT_EntryButton1,
 	CAMERA_LIST_OT_ResetXDimension,
 	CAMERA_LIST_OT_ResetYDimension,
@@ -633,6 +665,8 @@ classes = (
 	CAMERA_LIST_OT_render_custom_resolution,
 	UpdateCameraListOperator,
 	CAMERA_OT_select_camera,
+	RENDER_OT_confirm_dialog,
+	RENDER_OT_render_with_confirmation,
 )
 
 
