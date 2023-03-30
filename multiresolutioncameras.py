@@ -146,11 +146,11 @@ class CameraListPanel(bpy.types.Panel):
 			if selected_camera is not None and selected_camera.type == 'CAMERA':
 				# Add X and Y dimension text fields and reset buttons
 				row = layout.row(align=True)
-				row.prop(selected_camera, '["x_dim"]', text="X")
+				row.prop(selected_camera, '["x_dim"]', text="Width")
 				row.operator("camera_list.reset_x_dimension", text="", icon='LOOP_BACK')
 	
 				row = layout.row(align=True)
-				row.prop(selected_camera, '["y_dim"]', text="Y")
+				row.prop(selected_camera, '["y_dim"]', text="Height")
 				row.operator("camera_list.reset_y_dimension", text="", icon='LOOP_BACK')
 		else:
 			# Draw the update button spanning two columns
