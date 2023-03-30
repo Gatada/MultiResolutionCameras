@@ -47,8 +47,17 @@ class CAMERA_LIST_OT_ResetXDimension(bpy.types.Operator):
 		scene = context.scene
 		camera_list = scene.camera_list
 		selected_camera = scene.cameras[camera_list.highlighted_camera_index]
+		
+		camera = bpy.data.objects[selected_camera.name]
+		if not camera:
+			self.report({'WARNING'}, f"Camera {selected_camera.name} not found")
+			return {'CANCELLED'}
+				
 		selected_camera.x_dim = bpy.context.scene.render.resolution_x
-		bpy.data.objects[selected_camera.name]["x_dim"] = selected_camera.x_dim
+		camera["x_dim"] = selected_camera.x_dim
+		
+		resize_passepartout(camera, selected_camera.x_dim, bpy.data.objects[selected_camera.name]["y_dim"])
+		
 		return {'FINISHED'}
 
 
@@ -61,11 +70,34 @@ class CAMERA_LIST_OT_ResetYDimension(bpy.types.Operator):
 		scene = context.scene
 		camera_list = scene.camera_list
 		selected_camera = scene.cameras[camera_list.highlighted_camera_index]
+		
+		camera = bpy.data.objects[selected_camera.name]
+		if not camera:
+			self.report({'WARNING'}, f"Camera {selected_camera.name} not found")
+			return {'CANCELLED'}
+		
 		selected_camera.y_dim = bpy.context.scene.render.resolution_y
-		bpy.data.objects[selected_camera.name]["y_dim"] = selected_camera.y_dim
+		camera["y_dim"] = selected_camera.y_dim
+		
+		resize_passepartout(camera, selected_camera.y_dim, bpy.data.objects[selected_camera.name]["y_dim"])
+		
 		return {'FINISHED'}
 
 
+
+
+class CameraItemProperties(bpy.types.PropertyGroup):
+
+	name: bpy.props.StringProperty()
+
+	def get_x_dim(self):
+		obj = bpy.data.objects.get(self.name)
+		if obj is not None and "x_dim" in obj.keys():
+			return obj["x_dim"]
+		else:
+			return bpy.context.scene.render.resolution_x
+			
+			
 
 class CameraItemProperties(bpy.types.PropertyGroup):
 
@@ -510,10 +542,17 @@ class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 		if camera_item:
 		
 			# Modify the X and Y dimensions
-			camera_item.set_x_dim = None
-			camera_item.set_y_dim = None
+			camera_item.x_dim = context.scene.render.resolution_x
+			camera_item.y_dim = context.scene.render.resolution_y
 			
-			self.report({'INFO'}, f"Successfully reset {camera_item.name} to {camera_item.x_dim}×{camera_item.y_dim}")
+			camera = bpy.data.objects.get(camera_item.name)
+			if not camera:
+				self.report({'WARNING'}, f"Camera {camera_data.camera_name} not found")
+				return {'FINISHED'}
+
+			resize_passepartout(camera, camera_item.x_dim, camera_item.y_dim)
+			
+			self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
 
 		return {'FINISHED'}
 
@@ -521,18 +560,25 @@ class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 	def invoke(self, context, event):
 		if event.alt:
 			# Clear custom resolution from all cameras
-			for cam in context.scene.cameras:
-				camera = bpy.data.objects.get(cam.name)
-				camera.set_x_dim = None
-				camera.set_y_dim = None
-		
+			for camera_item in context.scene.cameras:
+			
+				# Modify the X and Y dimensions
+				camera_item.x_dim = context.scene.render.resolution_x
+				camera_item.y_dim = context.scene.render.resolution_y
+			
+			camera_item = context.scene.cameras[self.camera_index]
+			camera = bpy.data.objects.get(camera_item.name)
+			if not camera:
+				# No camera is selected, no need to update the render border
+				return {'FINISHED'}
+
+			resize_passepartout(camera, camera_item.x_dim, camera_item.y_dim)
 			context.area.tag_redraw()
 			return {'FINISHED'}
 		
-		else:
-			self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
+		else:			
 			return self.execute(context)
-
+	
 
 
 # Confirmation dialog box
