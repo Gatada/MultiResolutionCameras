@@ -229,11 +229,11 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 
 
 
-def update_aspect_fit_to(self, context):
-		if self.aspect_fit_to == 'WIDTH':
-			self.custom_aspect_value = context.scene.render.resolution_x
-		elif self.aspect_fit_to == 'HEIGHT':
-			self.custom_aspect_value = context.scene.render.resolution_y
+# def update_aspect_fit_to(self, context):
+# 		if self.aspect_fit_to == 'WIDTH':
+# 			self.custom_aspect_value = context.scene.render.resolution_x
+# 		elif self.aspect_fit_to == 'HEIGHT':
+# 			self.custom_aspect_value = context.scene.render.resolution_y
 
 def update_render_size(self, context):
 	# Your code to handle the "Adjust render size (keeping aspect ratio)" checkbox logic
@@ -251,49 +251,49 @@ bpy.types.Scene.adjust_lens_clip = BoolProperty(
 	default=False,
 )
 
-bpy.types.Scene.adjust_render_size = BoolProperty(
-	name="Adjust render size",
-	description="The aspect ratio will be ratined.",
-	default=False,
-	update=update_render_size,
-)
+# bpy.types.Scene.adjust_render_size = BoolProperty(
+# 	name="Adjust render size",
+# 	description="The aspect ratio will be ratined.",
+# 	default=False,
+# 	update=update_render_size,
+# )
 
-bpy.types.Scene.aspect_fit_to = EnumProperty(
-	name="Aspect fit to",
-	description="Choose the dimension to fit the aspect ratio to",
-	items=[
-		("WIDTH", "Width", "Fit aspect ratio to width"),
-		("HEIGHT", "Height", "Fit aspect ratio to height"),
-	],
-	default="WIDTH",
-	update=update_aspect_fit_to,
-)
+# bpy.types.Scene.aspect_fit_to = EnumProperty(
+# 	name="Aspect fit to",
+# 	description="Choose the dimension to fit the aspect ratio to",
+# 	items=[
+# 		("WIDTH", "Width", "Fit aspect ratio to width"),
+# 		("HEIGHT", "Height", "Fit aspect ratio to height"),
+# 	],
+# 	default="WIDTH",
+# 	update=update_aspect_fit_to,
+# )
 
-bpy.types.Scene.reformat_camera_name = EnumProperty(
-	name="Reformat camera name",
-	description="Choose how to reformat the camera name",
-	items=[
-		("LEAVE", "Leave as is", "Do not change the camera name format"),
-		("SNAKE", "snake_case", "Format the camera name in snake_case"),
-		("CAMEL", "camelCase", "Format the camera name in camelCase"),
-		("PASCAL", "PascalCase", "Format the camera name in PascalCase"),
-		("TITLErπ", "Title Case", "Format the camera name in Title Case"),
-	],
-	default="LEAVE",
-)
+# bpy.types.Scene.reformat_camera_name = EnumProperty(
+# 	name="Reformat camera name",
+# 	description="Choose how to reformat the camera name",
+# 	items=[
+# 		("LEAVE", "Leave as is", "Do not change the camera name format"),
+# 		("SNAKE", "snake_case", "Format the camera name in snake_case"),
+# 		("CAMEL", "camelCase", "Format the camera name in camelCase"),
+# 		("PASCAL", "PascalCase", "Format the camera name in PascalCase"),
+# 		("TITLErπ", "Title Case", "Format the camera name in Title Case"),
+# 	],
+# 	default="LEAVE",
+# )
 
-bpy.types.Scene.custom_aspect_value = IntProperty(
-	name="Size of selected side",
-	description="Enter the length of the fixed side.",
-)
+# bpy.types.Scene.custom_aspect_value = IntProperty(
+# 	name="Size of selected side",
+# 	description="Enter the length of the fixed side.",
+# )
 
-bpy.types.Scene.custom_aspect_value = bpy.props.IntProperty(
-	name="Custom aspect value",
-	description="Enter a custom aspect value",
-	default=0,
-	min=0,
-	soft_max=10000,
-)
+# bpy.types.Scene.custom_aspect_value = bpy.props.IntProperty(
+# 	name="Custom aspect value",
+# 	description="Enter a custom aspect value",
+# 	default=0,
+# 	min=0,
+# 	soft_max=10000,
+# )
 
 class PROCESS_OT_all_cameras(bpy.types.Operator):
 	bl_idname = "camera_list.process_all_cameras"
@@ -944,7 +944,7 @@ def register():
 
 	bpy.types.Scene.cameras = bpy.props.CollectionProperty(
 		type=CameraItemProperties,
-		 description="List of properties for each cameras in the scene")
+		 description="List of properties for each camera in the scene")
 		 
 	bpy.types.Scene.passepartout_width = bpy.props.IntProperty(
 		name="Width",
@@ -962,7 +962,7 @@ def register():
 		soft_max=10000
 	)
 	
-	bpy.context.scene.custom_aspect_value = bpy.context.scene.render.resolution_x
+	# bpy.context.scene.custom_aspect_value = bpy.context.scene.render.resolution_x
 	
 	# Register the depsgraph update handler
 	bpy.app.handlers.depsgraph_update_post.append(update_multiresolution_camera_frame)
@@ -988,7 +988,7 @@ def unregister():
 	bpy.app.handlers.depsgraph_update_post.remove(update_camera_list)
 	
 	# Remove the custom_aspect_value property
-	del bpy.types.Scene.custom_aspect_value
+	# del bpy.types.Scene.custom_aspect_value
 
 
 if __name__ == "__main__":
