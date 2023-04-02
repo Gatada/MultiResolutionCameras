@@ -40,6 +40,9 @@ def on_highlighted_camera_index_update(self, context):
 		selected_row = scene.camera_list.highlighted_camera_index
 		selected_camera_item = context.scene.cameras[selected_row]
 		camera_name = selected_camera_item.name
+		
+		print(f"Camera name: {camera_name}, Selected row: {selected_row}")
+		
 		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
 
 
@@ -396,7 +399,7 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				# NAME: Name of the camera
 				# Click to modify dimensions of camera.
 				# Double click to modify name.
-				row.prop(camera_item, "name", text="", emboss=False)
+				row.prop(valid_camera, "name", text="", emboss=False)
 
 
 				# WRENCH: shows as filled when camera has custom dimensions
@@ -411,7 +414,7 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				
 				if not context.scene.move_focus_with_keys:	
 					# Add operator to select camera and set it as the current rendering camera when the row is clicked
-					camera_select_op = row.operator("scene.select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
+					camera_select_op = row.operator("scene.highlight_and_select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
 					camera_select_op.camera_name = camera_item.name
 					camera_select_op.row_index = index
 				
@@ -422,6 +425,18 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 
+class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
+			bl_idname = "scene.highlight_and_select_camera"
+			bl_label = "Highlight Camera in Camera List and make it Scene Camera"
+			
+			camera_name: bpy.props.StringProperty(name="Camera Name")
+			row_index: bpy.props.IntProperty()
+			
+			def execute(self, context):			
+				bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
+				bpy.ops.scene.select_camera(camera_name=self.camera_name, row_index=self.row_index)
+				return {'FINISHED'}
+
 
 class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 	bl_idname = "scene.select_camera"
@@ -431,10 +446,6 @@ class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 	row_index: bpy.props.IntProperty()
 	
 	def execute(self, context):
-
-		# Highlighting clicked row
-		bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
-
 		camera = bpy.data.objects.get(self.camera_name)
 		if camera is not None:
 		
@@ -921,6 +932,7 @@ classes = (
 	CAMERA_LIST_OT_clear_custom_size,
 	CAMERA_LIST_OT_toggle_use_camera,
 	CAMERA_LIST_OT_select_camera,
+	CAMERA_LIST_OT_highlight_and_select_camera,
 	CAMERA_LIST_OT_update_camera_list,
 	CAMERA_LIST_PT_extra_features,
 	
