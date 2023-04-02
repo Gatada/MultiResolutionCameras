@@ -88,7 +88,7 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 
 	def get_use_camera(self):
 		obj = bpy.data.objects.get(self.name)
-		if obj is not None and obj["use_camera"] is not None:
+		if obj is not None and "use_camera" in obj.keys() and obj["use_camera"] is not None:
 			return obj["use_camera"]
 		else:
 			return True
@@ -164,8 +164,7 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 	
 	def has_custom_resolution(self):
 		obj = bpy.data.objects.get(self.name)
-		# Does a non-existent camera have a custom resolution? I say, yes?
-		return obj is None or obj["x_dim"] is not None or obj["y_dim"] is not None
+		return obj is not None and (("x_dim" in obj.keys() and obj["x_dim"] is not None) or ("y_dim" in obj.keys() and obj["y_dim"] is not None))
 
 
 
@@ -449,11 +448,11 @@ class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 			
 			# The formula for the relationship between camera object size and clip start is:
 			maximum_clip_start_to_avoid_hiding_render_border = 1.465 * camera.scale.x - 0.0158
-						
+
 			if camera.data.clip_start > maximum_clip_start_to_avoid_hiding_render_border:
 				if context.scene.adjust_lens_clip:
-					camera.data.clip_start = maximum_clip_start_to_avoid_hiding_render_border
-					print("Adjusted camera clip start to: ", maximum_clip_start_to_avoid_hiding_render_border)
+					camera.data.clip_start = min(1.38888891887, maximum_clip_start_to_avoid_hiding_render_border)
+					self.report({'INFO'}, f"Adjusted camera clip start to: {maximum_clip_start_to_avoid_hiding_render_border}")
 				else:
 					rounded_value = round(maximum_clip_start_to_avoid_hiding_render_border, 4)
 					self.report({'WARNING'}, f"Reduce Camera Lens Clip Start to below {rounded_value} if the Render Border is clipped (hidden).")
@@ -709,8 +708,7 @@ class RENDER_OT_confirm_dialog_render_all(bpy.types.Operator):
 			self.report({'WARNING'}, "No cameras in scene")
 			return {'CANCELLED'}
 			
-		cameras_to_render = len(scene.cameras)
-		render_feedback = render_images(scene, cameras_to_render)
+		render_feedback = render_images(scene, scene.cameras)
 		self.report({'INFO'}, render_feedback)
 		
 		return {'FINISHED'}
