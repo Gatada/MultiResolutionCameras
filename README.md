@@ -9,9 +9,6 @@ But what makes the add-on cool is that you can preview the render right there in
 It is a single file add-on. After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
 
 
-![Feature Overview](https://user-images.githubusercontent.com/326334/228676238-09964662-3a0f-4cdf-ab00-4d49347428d7.png)
-
-
 ![Custom Camera Resolution](https://user-images.githubusercontent.com/326334/228645249-619cb3b0-3934-496a-b817-aeb84345221b.png)
 
 
@@ -27,6 +24,8 @@ To install this add-on please follow these steps:
 
 
 ## Quick Overview
+
+![Feature Overview](https://user-images.githubusercontent.com/326334/228676238-09964662-3a0f-4cdf-ab00-4d49347428d7.png)
 
 The add-on panel presents a scrollable list, two integer fields with undo buttons, and two render buttons.
 
