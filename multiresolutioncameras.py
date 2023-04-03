@@ -323,7 +323,7 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 		# The List of Cameras
 		
 		row = layout.row()
-		row.template_list("CAMERA_UL_custom_resolution_camera_list", "", scene, "cameras", camera_list, "highlighted_camera_index", rows=10)
+		row.template_list("CAMERA_UL_custom_resolution_camera_list", "", scene, "cameras", camera_list, "highlighted_camera_index", rows=5)
 		
 		# The dimensions of the render border
 	
@@ -380,6 +380,7 @@ def get_selected_camera_count():
 		return f"Render {camera_count}"
 
 
+
 class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
@@ -426,16 +427,17 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
-			bl_idname = "scene.highlight_and_select_camera"
-			bl_label = "Highlight Camera in Camera List and make it Scene Camera"
-			
-			camera_name: bpy.props.StringProperty(name="Camera Name")
-			row_index: bpy.props.IntProperty()
-			
-			def execute(self, context):			
-				bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
-				bpy.ops.scene.select_camera(camera_name=self.camera_name, row_index=self.row_index)
-				return {'FINISHED'}
+	bl_idname = "scene.highlight_and_select_camera"
+	bl_label = "Highlight Camera in Camera List and make it Scene Camera"
+	
+	camera_name: bpy.props.StringProperty(name="Camera Name")
+	row_index: bpy.props.IntProperty()
+	
+	def execute(self, context):			
+		bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
+		print(f"NAME: {self.camera_name} ROW: {self.row_index}")
+		bpy.ops.scene.select_camera(camera_name=self.camera_name, row_index=self.row_index)
+		return {'FINISHED'}
 
 
 class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
@@ -462,7 +464,7 @@ class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 
 			if camera.data.clip_start > maximum_clip_start_to_avoid_hiding_render_border:
 				if context.scene.adjust_lens_clip:
-					camera.data.clip_start = min(1.38888891887, maximum_clip_start_to_avoid_hiding_render_border)
+					camera.data.clip_start = min(1.3888888, maximum_clip_start_to_avoid_hiding_render_border)
 					self.report({'INFO'}, f"Adjusted camera clip start to: {maximum_clip_start_to_avoid_hiding_render_border}")
 				else:
 					rounded_value = round(maximum_clip_start_to_avoid_hiding_render_border, 4)
@@ -947,6 +949,7 @@ classes = (
 
 
 def register():
+	
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
