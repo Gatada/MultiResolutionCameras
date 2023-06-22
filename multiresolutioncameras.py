@@ -15,7 +15,7 @@
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (2, 5),
+	"version": (2, 6),
 	"blender": (3, 0, 0),
 	"location": "View3D > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
@@ -199,7 +199,10 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		# The "Adjust Lens Clip to show Render Border" checkbox
 		row = layout.row()
 		row.prop(scene, "adjust_lens_clip", text="Adjust Lens Clip if needed")
-		
+
+		# The "Always show Render Border" checkbox
+		row = layout.row()
+		row.prop(scene, "always_show_render_border", text="Always show Render Border")				
 		
 		# COMING FEATURES:
 		# The "Adjust render size (keeping aspect ratio)" checkbox
@@ -250,7 +253,13 @@ bpy.types.Scene.move_focus_with_keys = BoolProperty(
 bpy.types.Scene.adjust_lens_clip = BoolProperty(
 	name="Adjust Lens Clip",
 	description="Adjust Lens Clip to show Render Border",
-	default=False,
+	default=False
+)
+
+bpy.types.Scene.always_show_render_border = BoolProperty(
+	name="Always show Render Border",
+	description="Prevents Render Border from auto-hiding",
+	default=False
 )
 
 # bpy.types.Scene.adjust_render_size = BoolProperty(
@@ -900,11 +909,11 @@ def update_multiresolution_camera_frame(scene):
 		# Check if the selected camera is in the list of cameras with custom dimensions
 		custom_camera = bpy.context.scene.cameras.get(selected_camera.name)
 		if custom_camera and (custom_camera.x_dim != bpy.context.scene.render.resolution_x or custom_camera.y_dim != bpy.context.scene.render.resolution_y):
-			# Show the passepartout for the active camera
+			# Show the passepartout for the active camera with custom dimensions
 			passepartout = resize_passepartout(selected_camera, custom_camera.x_dim, custom_camera.y_dim)
 			passepartout.hide_viewport = False
 		else:
-			# Hide the passepartout if the selected camera does not have custom dimensions
+			# Hiding passepartout since the selected camera does not have custom dimensions
 			if passepartout:
 				passepartout.hide_viewport = True
 			
@@ -915,8 +924,8 @@ def update_multiresolution_camera_frame(scene):
 			passepartout.matrix_world = selected_camera.matrix_world
 
 	else:
-		# Hide the passepartout if no camera is selected
-		if passepartout:
+		# Hide the passepartout if no camera is selected - and the user wants it hidden
+		if passepartout and not bpy.context.scene.always_show_render_border:
 			passepartout.hide_viewport = True
 
 
