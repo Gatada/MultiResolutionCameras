@@ -15,7 +15,7 @@
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (2, 6, 1),
+	"version": (2, 6, 2),
 	"blender": (3, 0, 0),
 	"location": "3D Viewport > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
@@ -824,13 +824,19 @@ class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
 @persistent
 def update_camera_list(scene, depsgraph=None):
 	scene.cameras.clear()
+
 	for obj in scene.objects:
 		if obj.type == 'CAMERA':
 			item = scene.cameras.add()
 			item.name = obj.name
 			# The other properties have a default value.
 			
-
+	# Selecting camera in list if it was selected elsewhere:
+	selected_camera = bpy.context.active_object
+	if selected_camera and selected_camera.type == 'CAMERA':
+		camera_list = scene.camera_list
+		index = next((i for i, cam in enumerate(scene.cameras) if cam.name == selected_camera.name), -1)
+		camera_list.highlighted_camera_index = index
 
 
 
@@ -943,9 +949,6 @@ def update_multiresolution_camera_frame(scene):
 			passepartout.hide_viewport = True
 
 
-
-
-
 classes = (
 	CameraListProperties,
 	CameraItemProperties,
@@ -967,8 +970,6 @@ classes = (
 	RENDER_OT_confirm_dialog_render_all,
 	RENDER_OT_confirm_dialog_render_selected,
 )
-
-
 
 
 def register():
@@ -1006,7 +1007,6 @@ def register():
 
 
 
-
 def unregister():
 	for cls in classes:
 		bpy.utils.unregister_class(cls)
@@ -1025,7 +1025,6 @@ def unregister():
 	
 	# Remove the custom_aspect_value property
 	# del bpy.types.Scene.custom_aspect_value
-
 
 if __name__ == "__main__":
 	register()
