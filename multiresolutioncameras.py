@@ -15,9 +15,9 @@
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (2, 6),
+	"version": (2, 6, 1),
 	"blender": (3, 0, 0),
-	"location": "View3D > Sidebar [N] > Render Resolutions",
+	"location": "3D Viewport > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
 	"category": "3D View",
 }
@@ -172,7 +172,7 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 
 
 class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
-	bl_label = "Camera Assistant"
+	bl_label = "Settings"
 	bl_idname = "VIEW3D_PT_feature_list"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
@@ -203,6 +203,11 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		# The "Always show Render Border" checkbox
 		row = layout.row()
 		row.prop(scene, "always_show_render_border", text="Always show Render Border")				
+		
+		# The "Append Resolution to Image Name" checkbox
+		row = layout.row()
+		row.prop(scene, "append_resolution", text="Filename includes Resolution")				
+		
 		
 		# COMING FEATURES:
 		# The "Adjust render size (keeping aspect ratio)" checkbox
@@ -259,6 +264,12 @@ bpy.types.Scene.adjust_lens_clip = BoolProperty(
 bpy.types.Scene.always_show_render_border = BoolProperty(
 	name="Always show Render Border",
 	description="Prevents Render Border from auto-hiding",
+	default=False
+)
+
+bpy.types.Scene.append_resolution = BoolProperty(
+	name="Filename includes Resolution",
+	description="Append render resolution to filename",
 	default=False
 )
 
@@ -623,7 +634,10 @@ def render_images(scene, cameras_to_render):
 		scene.render.resolution_y = camera_data.y_dim
 		
 		# set output path
-		camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
+		if bpy.context.scene.append_resolution:
+			camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
+		else:
+			camera_file_path = os.path.join(file_dir, f"{camera_data.name}.png")			
 		scene.render.filepath = bpy.path.ensure_ext(camera_file_path, ".png")
 		
 		print(f"\nRendering {render_progress} of {number_of_cameras_to_render}: \"{camera.name}\". Interface will become more or less unresponsive.")
