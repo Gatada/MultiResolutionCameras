@@ -15,7 +15,7 @@
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (2, 6, 2),
+	"version": (2, 7, 2),
 	"blender": (3, 0, 0),
 	"location": "3D Viewport > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
@@ -26,6 +26,7 @@ import time
 import math
 import bpy
 import os
+import re
 from bpy.app.handlers import persistent
 from bpy.props import BoolProperty, EnumProperty, StringProperty, IntProperty
 
@@ -171,6 +172,35 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 
 
 
+class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
+		bl_label = "Animation"
+		bl_idname = "VIEW3D_PT_animation_actions"
+		bl_space_type = 'VIEW_3D'
+		bl_region_type = 'UI'
+		bl_category = 'Render Resolutions'
+		bl_options = {'DEFAULT_CLOSED'}
+		
+		def draw(self, context):
+			layout = self.layout
+			
+			# Add animate cameras button
+			row = layout.row()
+			row.operator("camera.animate_cameras", text="Animate Sequence", icon="PLAY")
+			
+			# Add a box around the Render Actions
+			box = layout.box()
+			box.enabled = True # Might in the future change to False if no camera name has a frame range postfix.
+					
+			# Add animate cameras button
+			row = box.row()
+			row.operator("camera.render_animations", text="Eevee-Render Sequence", icon="RENDER_ANIMATION").render_engine="BLENDER_EEVEE"
+			
+			# Add animate cameras button
+			row = box.row()
+			row.operator("camera.render_animations", text="Cycles-Render Sequence", icon="RENDER_ANIMATION").render_engine="CYCLES"
+			
+			
+
 class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 	bl_label = "Settings"
 	bl_idname = "VIEW3D_PT_feature_list"
@@ -207,7 +237,6 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		# The "Append Resolution to Image Name" checkbox
 		row = layout.row()
 		row.prop(scene, "append_resolution", text="Filename includes Resolution")				
-		
 		
 		# COMING FEATURES:
 		# The "Adjust render size (keeping aspect ratio)" checkbox
@@ -326,6 +355,117 @@ class PROCESS_OT_all_cameras(bpy.types.Operator):
 		return {'FINISHED'}
 
 
+# Custom property to track the state of the "Preview Animation" button
+bpy.types.Scene.is_previewing_animation = bpy.props.BoolProperty(name="Is Previewing Animation", default=False)
+
+# Frame change handler to update active camera during animation playback
+def update_active_camera(scene):
+	if scene.is_previewing_animation:
+		frame = scene.frame_current
+		
+		# Find all cameras with frame ranges in their names
+		cameras_with_frame_ranges = []
+		for camera in bpy.data.cameras:
+			match = re.search(r'(\d+)-(\d+)', camera.name)
+			if match:
+				start_frame = int(match.group(1))
+				end_frame = int(match.group(2))
+				cameras_with_frame_ranges.append((camera, start_frame, end_frame))
+		
+		# Sort cameras based on their frame ranges
+		cameras_with_frame_ranges.sort(key=lambda x: (x[1], x[2]))
+		
+		# Check if the current frame is within the frame range of any camera
+		for camera, start_frame, end_frame in cameras_with_frame_ranges:
+			if start_frame <= frame <= end_frame:
+				scene.camera = camera
+				break
+
+# Operator to animate cameras based on their frame ranges
+class CAMERA_OT_AnimateCameras(bpy.types.Operator):
+	bl_idname = "camera.animate_cameras"
+	bl_label = "Animate Cameras"
+	bl_description = "Animate cameras based on their frame ranges"
+	
+	@classmethod
+	def poll(cls, context):
+		return context.area.type == 'VIEW_3D'
+	
+	def modal(self, context, event):
+		if event.type == 'ESC':
+			context.scene.is_previewing_animation = False
+			bpy.app.handlers.frame_change_post.remove(update_active_camera)
+			return {'CANCELLED'}
+		
+		if event.type == 'TIMER':
+			context.scene.frame_set(context.scene.frame_current + 1)
+		
+		return {'PASS_THROUGH'}
+	
+	def invoke(self, context, event):
+		wm = context.window_manager
+		
+		if context.scene.is_previewing_animation:
+			wm.modal_handler_add(self)
+			wm.modal_timer_add(100, window=context.window)
+			bpy.app.handlers.frame_change_post.append(update_active_camera)
+			update_active_camera(context.scene)  # Update active camera when animation starts
+		else:
+			bpy.ops.screen.animation_play()
+		
+		return {'RUNNING_MODAL'}
+
+	def execute(self, context):
+		context.scene.is_previewing_animation = not context.scene.is_previewing_animation
+		return {'FINISHED'}
+
+	def cancel(self, context):
+		# Remove frame change handler when the operator is canceled
+		bpy.app.handlers.frame_change_post.remove(update_active_camera)
+		return {'FINISHED'}
+
+
+
+class CAMERA_OT_RenderAnimations(bpy.types.Operator):
+	bl_idname = "camera.render_animations"
+	bl_label = "Render Ranged Animations"
+	bl_description = "Render the animations from each camera in the scene using the frame range suffix."
+
+	# Valid values: "CYCLES", "BLENDER_EEVEE", "BLENDER_WORKBENCH"
+	render_engine: bpy.props.StringProperty()
+	
+	def execute(self, context):		
+		# Set the selected render engine:
+		bpy.context.scene.render.engine = self.render_engine
+		
+		scene = context.scene
+		for camera_data in scene.cameras:
+			camera = bpy.data.objects.get(camera_data.name)
+			if camera and camera.type == 'CAMERA':
+				
+				# Extract camera name and frame range from the camera_data.name
+				match = re.search(r'([a-zA-Z]+)\s+(\d+)-(\d+)', camera_data.name)
+				
+				if match:
+					name = match.group(1)
+					start_frame = int(match.group(2))
+					end_frame = int(match.group(3))
+	
+					# Set the active camera to the current camera
+					scene.camera = camera
+	
+					# Set the frame range for rendering
+					bpy.context.scene.frame_start = start_frame
+					bpy.context.scene.frame_end = end_frame
+	
+					# Render the animation
+					bpy.ops.render.render(animation=True)
+	
+		return {'FINISHED'}
+			
+			
+			
+			
 class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 	bl_label = "Camera List"	
 	bl_idname = "VIEW3D_PT_camera_list"
@@ -355,11 +495,11 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 				# Add X and Y dimension text fields and reset buttons
 				row = layout.row(align=True)
 				row.prop(camera_item, "x_dim", text="Width")
-				row.operator("camera_list.reset_custom_dimension", text="", icon='LOOP_BACK').clear_dimension="width"
+				row.operator("camera_list.reset_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="width"
 	
 				row = layout.row(align=True)
 				row.prop(camera_item, "y_dim", text="Height")
-				row.operator("camera_list.reset_custom_dimension", text="", icon='LOOP_BACK').clear_dimension="height"
+				row.operator("camera_list.reset_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="height"
 					
 		else:
 			# Draw the update button spanning two columns
@@ -384,6 +524,7 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 		#op.enabled = render_selection_toggle
 		
 		row.operator("render.confirm_dialog_all_cameras", text="Render All") #, icon="OUTPUT")
+		
 		
 
 bpy.types.Object.y_dim = bpy.props.IntProperty(
@@ -969,6 +1110,10 @@ classes = (
 	RENDER_OT_render_custom_resolution,
 	RENDER_OT_confirm_dialog_render_all,
 	RENDER_OT_confirm_dialog_render_selected,
+	
+	CAMERA_OT_RenderAnimations,
+	CAMERA_LIST_PT_animation_buttons,
+	CAMERA_OT_AnimateCameras,
 )
 
 
