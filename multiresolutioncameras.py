@@ -377,12 +377,9 @@ def update_active_camera(scene, dummy):
 		
 		# Check if the current frame is within the frame range of any camera
 		for camera, start_frame, end_frame in scene.cameras_with_frame_range:
-			# print(f"Checking camera: {camera.name}")
 			if start_frame <= frame <= end_frame:
-				print(f"Swapping to camera {camera.name}.")
-				# Set the active camera in the view layer
-				camera_obj = bpy.data.objects.get(camera.name)
-				scene.camera = camera_obj
+				scene.camera = camera
+				print(f"Swapped to {camera.name} for frame {frame}.")
 				break
 
 bpy.app.handlers.frame_change_pre.append(update_active_camera)
@@ -395,20 +392,21 @@ class CAMERA_OT_AnimateCameras(bpy.types.Operator):
 	
 	def execute(self, context):
 		self.get_cameras(context.scene)
-		return {'FINISHED'}		
-		
-		
+		return {'FINISHED'}
+
 	def get_cameras(self, scene):
 		# Find all cameras with frame ranges in their names
 		scene.cameras_with_frame_range.clear()
 
-		for camera in bpy.data.cameras:
-			match = re.search(r'(\d+)-(\d+)', camera.name)
-			print(f"Camera: {camera.name}")
-			if match:
-				start_frame = int(match.group(1))
-				end_frame = int(match.group(2))
-				scene.cameras_with_frame_range.append((camera, start_frame, end_frame))
+		for camera_data in scene.cameras:
+			camera = bpy.data.objects.get(camera_data.name)
+			if camera and camera.type == 'CAMERA':
+				match = re.search(r'(\d+)-(\d+)', camera.name)
+				print(f"Camera: {camera.name}")
+				if match:
+					start_frame = int(match.group(1))
+					end_frame = int(match.group(2))
+					scene.cameras_with_frame_range.append((camera, start_frame, end_frame))
 		
 		# Sort cameras based on their frame ranges
 		scene.cameras_with_frame_range.sort(key=lambda x: (x[1], x[2]))
