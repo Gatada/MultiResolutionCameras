@@ -41,9 +41,6 @@ def on_highlighted_camera_index_update(self, context):
 		selected_row = scene.camera_list.highlighted_camera_index
 		selected_camera_item = context.scene.cameras[selected_row]
 		camera_name = selected_camera_item.name
-		
-		# print(f"Camera name: {camera_name}, Selected row: {selected_row}")
-		
 		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
 
 
@@ -373,13 +370,11 @@ bpy.types.Scene.cameras_with_frame_range = []
 def update_active_camera(scene, dummy):
 	if scene.is_previewing_animation:
 		frame = scene.frame_current
-		# print(f"Current frame: {frame}")
-		
+
 		# Check if the current frame is within the frame range of any camera
 		for camera, start_frame, end_frame in scene.cameras_with_frame_range:
 			if start_frame <= frame <= end_frame:
 				scene.camera = camera
-				print(f"Swapped to {camera.name} for frame {frame}.")
 				break
 
 bpy.app.handlers.frame_change_pre.append(update_active_camera)
@@ -401,17 +396,19 @@ class CAMERA_OT_AnimateCameras(bpy.types.Operator):
 		for camera_data in scene.cameras:
 			camera = bpy.data.objects.get(camera_data.name)
 			if camera and camera.type == 'CAMERA':
-				match = re.search(r'(\d+)-(\d+)', camera.name)
-				print(f"Camera: {camera.name}")
+				match = re.search(r'(\d+)-(\d+)', camera.name)				
 				if match:
 					start_frame = int(match.group(1))
 					end_frame = int(match.group(2))
 					scene.cameras_with_frame_range.append((camera, start_frame, end_frame))
+					print(f"Camera {camera.name} has range {start_frame}-{end_frame}.")
+				else:
+					print(f"Camera {camera.name} does not have a frame range with valid format: Abc <startframe>-<endframe>.")
 		
 		# Sort cameras based on their frame ranges
 		scene.cameras_with_frame_range.sort(key=lambda x: (x[1], x[2]))
 		number_of_cameras_in_sequence = len(scene.cameras_with_frame_range)
-		print(f"Cameras with frame range: {number_of_cameras_in_sequence} — {scene.cameras_with_frame_range}")
+		print(f"Found {number_of_cameras_in_sequence} cameras in the scene with a correctly formatted frame range.")
 
 
 class CAMERA_OT_RenderAnimations(bpy.types.Operator):
@@ -585,7 +582,6 @@ class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
 	
 	def execute(self, context):			
 		bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
-		#print(f"NAME: {self.camera_name} ROW: {self.row_index}")
 		bpy.ops.scene.select_camera(camera_name=self.camera_name, row_index=self.row_index)
 		return {'FINISHED'}
 
