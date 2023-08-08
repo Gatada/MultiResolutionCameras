@@ -15,7 +15,7 @@
 bl_info = {
 	"name": "Multi-Resolution Cameras",
 	"author": "Johan Basberg",
-	"version": (2, 8, 0),
+	"version": (2, 8, 4),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Render Resolutions",
 	"description": "Easily customize resolutions and render your cameras.",
@@ -424,42 +424,50 @@ class CAMERA_OT_AnimateCameras(bpy.types.Operator):
 
 
 class CAMERA_OT_RenderAnimations(bpy.types.Operator):
-	bl_idname = "camera.render_animations"
-	bl_label = "Render Ranged Animations"
-	bl_description = "Render the animations from each camera in the scene using the frame range suffix."
-
-	# Valid values: "CYCLES", "BLENDER_EEVEE", "BLENDER_WORKBENCH"
-	render_engine: bpy.props.StringProperty()
-	
-	def execute(self, context):		
-		# Set the selected render engine:
-		bpy.context.scene.render.engine = self.render_engine
+		bl_idname = "camera.render_animations"
+		bl_label = "Render Ranged Animations"
+		bl_description = "Render the animations from each camera in the scene using the frame range suffix."
 		
-		scene = context.scene
-		for camera_data in scene.cameras:
-			camera = bpy.data.objects.get(camera_data.name)
-			if camera and camera.type == 'CAMERA':
+		# Valid values: "CYCLES", "BLENDER_EEVEE", "BLENDER_WORKBENCH"
+		render_engine: bpy.props.StringProperty()
+		
+		def execute(self, context):		
+			# Set the selected render engine:
+			bpy.context.scene.render.engine = self.render_engine
+			
+			scene = context.scene
+			output_path = scene.render.filepath
+			
+			# Parsing the currently define frame range
+			for render_frame in range(bpy.context.scene.frame_start, bpy.context.scene.frame_end, 1):
 				
-				# Extract camera name and frame range from the camera_data.name
-				match = re.search(r'([a-zA-Z]+)\s+(\d+)-(\d+)', camera_data.name)
+				scene.frame_current = render_frame
 				
-				if match:
-					name = match.group(1)
-					start_frame = int(match.group(2))
-					end_frame = int(match.group(3))
-	
-					# Set the active camera to the current camera
-					scene.camera = camera
-	
-					# Set the frame range for rendering
-					bpy.context.scene.frame_start = start_frame
-					bpy.context.scene.frame_end = end_frame
-	
-					# Render the animation
-					print(f"Rendering {camera_data.name} for frame range {start_frame}-{end_frame}..")
-					bpy.ops.render.render(animation=True)
-	
-		return {'FINISHED'}
+				# Check if the current frame is within the frame range of any camera, and render frame only if a camera was found:
+				for camera, start_frame, end_frame in scene.cameras_with_frame_range:
+					if start_frame <= render_frame <= end_frame:
+						
+						scene.camera = camera
+		
+						# Render the animation
+						print(f"Rendering {camera.name} for frame {render_frame}.")
+
+						# Set the frame you want to render
+						scene.frame_set(render_frame)
+											
+						# Set the render output settings (if needed)
+						scene.render.image_settings.file_format = 'PNG'
+						
+						# Generate the filename with leading zeros
+						filename = f"{scene.frame_current:04d}.png"  # This formats the frame number to have at least 4 digits
+						output_filepath = f"{output_path}{filename}"
+						scene.render.filepath = output_filepath
+												
+						# Render the current frame using the specified file output path
+						bpy.ops.render.render(write_still=True)
+		
+			scene.render.filepath = output_path
+			return {'FINISHED'}
 			
 			
 			
