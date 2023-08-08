@@ -1,8 +1,12 @@
-# THE MULTI-RESOLUTION CAMERA ADD-ON
+# THE MULTI-CAMERA TOOLBOX ADD-ON
 #
-# Developed in March 2023 by Johan Basberg
+# Developed March-Aug 2023 by Johan Basberg
 #
-# This version of the script adds a rendering outline to the customized camera.
+# Various functions I needed for my own animation projects, which often would
+# require multiple cameras in a single scene, as well as cameras rendering at
+# different resolutions.
+#
+# This version of the script adds a rendering outline to the customised camera.
 # Without that mesh, you will not be able to see exactly what will be rendered.
 #
 # I hope you enjoy this add-on, cause I spent a lot of time developing it.
@@ -13,11 +17,11 @@
 
 
 bl_info = {
-	"name": "Multi-Resolution Cameras",
+	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg",
 	"version": (2, 8, 4),
 	"blender": (3, 6, 1),
-	"location": "3D Viewport > Sidebar [N] > Render Resolutions",
+	"location": "3D Viewport > Sidebar [N] > Multi-Camera",
 	"description": "Easily customize resolutions and render your cameras.",
 	"category": "3D View",
 }
@@ -174,7 +178,7 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 		bl_idname = "VIEW3D_PT_animation_actions"
 		bl_space_type = 'VIEW_3D'
 		bl_region_type = 'UI'
-		bl_category = 'Render Resolutions'
+		bl_category = 'Multi-Camera'
 		bl_options = {'DEFAULT_CLOSED'}
 		
 		def draw(self, context):
@@ -207,7 +211,7 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 	bl_idname = "VIEW3D_PT_feature_list"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
-	bl_category = 'Render Resolutions'
+	bl_category = 'Multi-Camera'
 	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
@@ -477,7 +481,7 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 	bl_idname = "VIEW3D_PT_camera_list"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
-	bl_category = 'Render Resolutions'
+	bl_category = 'Multi-Camera'
 	
 	def draw(self, context):
 		layout = self.layout
