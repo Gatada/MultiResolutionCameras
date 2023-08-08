@@ -183,7 +183,7 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 
 			# The "Append Resolution to Image Name" checkbox
 			row = self.layout.row()
-			row.prop(context.scene, "is_previewing_animation", text="Preview Animation Sequence")
+			row.prop(context.scene, "is_previewing_animation", text="Preview Sequence")
 			
 			# Add a box around the Render Actions
 			preview = self.layout.box()
@@ -396,12 +396,24 @@ class CAMERA_OT_AnimateCameras(bpy.types.Operator):
 		for camera_data in scene.cameras:
 			camera = bpy.data.objects.get(camera_data.name)
 			if camera and camera.type == 'CAMERA':
-				match = re.search(r'(\d+)-(\d+)', camera.name)				
-				if match:
-					start_frame = int(match.group(1))
-					end_frame = int(match.group(2))
-					scene.cameras_with_frame_range.append((camera, start_frame, end_frame))
-					print(f"Camera {camera.name} has range {start_frame}-{end_frame}.")
+				
+				# Allowing multiple ranges per camera:
+				
+				# Extract all digit ranges from the camera name
+				matches = re.findall(r'(\d+)-(\d+)', camera.name)
+				
+				if matches:
+					# Create a list to store all the ranges
+					ranges = []
+					
+					# Iterate through the matches and extract the start and end values of each range
+					for range_start, range_end in matches:
+						ranges.append((int(range_start), int(range_end)))
+					
+					# Print the extracted ranges
+					for start_frame, end_frame in ranges:
+						scene.cameras_with_frame_range.append((camera, start_frame, end_frame))
+						print(f"Camera {camera.name} has range {start_frame}-{end_frame}.")
 				else:
 					print(f"Camera {camera.name} does not have a frame range with valid format: Abc <startframe>-<endframe>.")
 		
