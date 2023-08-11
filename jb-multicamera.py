@@ -18,10 +18,10 @@
 
 bl_info = {
 	"name": "Multi-Camera Toolbox",
-	"author": "Johan Basberg",
-	"version": (2, 8, 4),
+	"author": "Johan Basberg, including code from Artell",
+	"version": (3, 0, 0),
 	"blender": (3, 6, 1),
-	"location": "3D Viewport > Sidebar [N] > Multi-Camera",
+	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Easily customize resolutions and render your cameras.",
 	"category": "3D View",
 }
@@ -172,13 +172,23 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 		return obj is not None and (("x_dim" in obj.keys() and obj["x_dim"] is not None) or ("y_dim" in obj.keys() and obj["y_dim"] is not None))
 
 
+class OBJECT_OT_toggle_disable_in_viewport(bpy.types.Operator):
+		bl_idname = "object.toggle_disable_in_viewport"
+		bl_label = "Refresh Visibility"
+		
+		def execute(self, context):
+			if context.scene.sor_show_only_render:
+				for obj in bpy.context.scene.objects:
+					obj.hide_set(obj.hide_render)
+			return {'FINISHED'}
+
 
 class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 		bl_label = "Animation"
 		bl_idname = "VIEW3D_PT_animation_actions"
 		bl_space_type = 'VIEW_3D'
 		bl_region_type = 'UI'
-		bl_category = 'Multi-Camera'
+		bl_category = 'Cameras'
 		bl_options = {'DEFAULT_CLOSED'}
 		
 		def draw(self, context):
@@ -194,7 +204,7 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 			preview.enabled = context.scene.is_previewing_animation
 
 			row = preview.row()
-			row.operator("camera.animate_cameras", text="Refresh Camera Frame Ranges", icon="ANIM")
+			row.operator("camera.process_frame_ranges", text="Refresh Frame Ranges", icon="ANIM")
 					
 			# Add animate cameras button
 			row = preview.row()
@@ -203,6 +213,20 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 			# Add animate cameras button
 			row = preview.row()
 			row.operator("camera.render_animations", text="Cycles-Render Sequence", icon="RENDER_ANIMATION").render_engine="CYCLES"
+						
+			row = self.layout.row()
+			row.prop(context.scene, "sor_show_only_render", text="Show Only Render")
+			
+			# Add a box around the options
+			box = self.layout.box()
+			box.enabled = context.scene.sor_show_only_render
+			
+			row = box.row()
+			row.operator("object.toggle_disable_in_viewport")
+			
+			row = box.row()
+			row.prop(bpy.context.scene, "sor_refresh_with_frame", text="Frame Auto-Refresh")
+
 			
 			
 
@@ -211,7 +235,7 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 	bl_idname = "VIEW3D_PT_feature_list"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
-	bl_category = 'Multi-Camera'
+	bl_category = 'Cameras'
 	bl_options = {'DEFAULT_CLOSED'}
 	
 	def draw(self, context):
@@ -279,9 +303,14 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 # 		elif self.aspect_fit_to == 'HEIGHT':
 # 			self.custom_aspect_value = context.scene.render.resolution_y
 
-def update_render_size(self, context):
-	# Your code to handle the "Adjust render size (keeping aspect ratio)" checkbox logic
-	pass
+# def update_render_size(self, context):
+# 	# Your code to handle the "Adjust render size (keeping aspect ratio)" checkbox logic
+# 	pass
+	
+# Property callback function
+def update_previewing_animation(self, context):
+	if self.is_previewing_animation:
+		bpy.ops.camera.process_frame_ranges()
 
 bpy.types.Scene.move_focus_with_keys = BoolProperty(
 		name="Camera Follows Highlight",
@@ -310,7 +339,8 @@ bpy.types.Scene.append_resolution = BoolProperty(
 bpy.types.Scene.is_previewing_animation = BoolProperty(
 	name="Use Camera Frameranges",
 	description="Camera frame range and current frame sets active camera",
-	default=False
+	default=False,
+	update=update_previewing_animation
 )
 
 # bpy.types.Scene.adjust_render_size = BoolProperty(
@@ -384,17 +414,15 @@ def update_active_camera(scene, dummy):
 bpy.app.handlers.frame_change_pre.append(update_active_camera)
 
 # Operator to animate cameras based on their frame ranges
-class CAMERA_OT_AnimateCameras(bpy.types.Operator):
-	bl_idname = "camera.animate_cameras"
-	bl_label = "Animate Cameras"
-	bl_description = "Animate cameras based on their frame ranges"
+class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
+	bl_idname = "camera.process_frame_ranges"
+	bl_label = "Process Camera Ranges"
+	bl_description = "Execute to process the frame ranges of each camera in the scene"
 	
 	def execute(self, context):
-		self.get_cameras(context.scene)
-		return {'FINISHED'}
-
-	def get_cameras(self, scene):
-		# Find all cameras with frame ranges in their names
+		scene = context.scene
+		
+		# Find all cameras with valid frame ranges in their names
 		scene.cameras_with_frame_range.clear()
 
 		for camera_data in scene.cameras:
@@ -424,7 +452,9 @@ class CAMERA_OT_AnimateCameras(bpy.types.Operator):
 		# Sort cameras based on their frame ranges
 		scene.cameras_with_frame_range.sort(key=lambda x: (x[1], x[2]))
 		number_of_cameras_in_sequence = len(scene.cameras_with_frame_range)
-		print(f"Found {number_of_cameras_in_sequence} cameras in the scene with a correctly formatted frame range.")
+		print(f"\nFound {number_of_cameras_in_sequence} cameras in the scene with a correctly formatted frame range.")
+		
+		return {'FINISHED'}
 
 
 class CAMERA_OT_RenderAnimations(bpy.types.Operator):
@@ -443,7 +473,7 @@ class CAMERA_OT_RenderAnimations(bpy.types.Operator):
 			output_path = scene.render.filepath
 			
 			# Parsing the currently define frame range
-			for render_frame in range(bpy.context.scene.frame_start, bpy.context.scene.frame_end, 1):
+			for render_frame in range(context.scene.frame_start, context.scene.frame_end, 1):
 				
 				scene.frame_current = render_frame
 				
@@ -454,7 +484,7 @@ class CAMERA_OT_RenderAnimations(bpy.types.Operator):
 						scene.camera = camera
 		
 						# Render the animation
-						print(f"Rendering {camera.name} for frame {render_frame}.")
+						self.progress_feedback(context)
 
 						# Set the frame you want to render
 						scene.frame_set(render_frame)
@@ -474,6 +504,17 @@ class CAMERA_OT_RenderAnimations(bpy.types.Operator):
 			return {'FINISHED'}
 			
 			
+		def progress_feedback(self, context):
+			scene = context.scene
+			
+			start_time = time.time()			
+			frame_count = context.scene.frame_end - context.scene.frame_start
+			sequence_frame = scene.frame_current - context.scene.frame_start
+			percentage_done = (sequence_frame/frame_count) * 100
+			
+			feedback = f"\n{sequence_frame} of {frame_count} — {percentage_done:.1f}% done: Rendering {scene.camera.name}.\nStarted rendering at {time.strftime('%H:%M:%S', time.localtime(start_time))}."
+			print(feedback)
+			
 			
 			
 class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
@@ -481,7 +522,7 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 	bl_idname = "VIEW3D_PT_camera_list"
 	bl_space_type = 'VIEW_3D'
 	bl_region_type = 'UI'
-	bl_category = 'Multi-Camera'
+	bl_category = 'Cameras'
 	
 	def draw(self, context):
 		layout = self.layout
@@ -526,12 +567,15 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 			render_selection_text = f"Render {selected_camera_count}"
 			render_selection_toggle = True			
 		else:
-			render_selection_text = "Render None"
+			render_selection_text = ""
 			render_selection_toggle = False
 		
 		row = layout.row(align=True)
-		row.operator("render.confirm_dialog_selected_cameras", text=render_selection_text) #, icon="OUTPUT")
-		#op.enabled = render_selection_toggle
+		
+		if render_selection_toggle:
+			row.operator("render.confirm_dialog_selected_cameras", text=render_selection_text)
+		else:
+			row.label(text=render_selection_text)	
 		
 		row.operator("render.confirm_dialog_all_cameras", text="Render All") #, icon="OUTPUT")
 		
@@ -669,7 +713,7 @@ class CAMERA_LIST_OT_update_camera_list(bpy.types.Operator):
 class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 	bl_idname = "camera_list.toggle_use_camera"
 	bl_label = "Toggle Selection"
-	bl_description = "Enable to include Camera when using Render Selected below"
+	bl_description = "Enable to include Camera when using Render Selected below. Shift+Click to toggle all Cameras"
 
 	camera_name: bpy.props.StringProperty()
 
@@ -683,7 +727,7 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 		return {'FINISHED'}
 	
 	def invoke(self, context, event):
-		if event.alt:
+		if event.alt or event.shift:
 			# Toggle selection state to all cameras
 			camera_item = context.scene.cameras[self.camera_name]
 			if camera_item is not None:
@@ -694,7 +738,7 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 				context.area.tag_redraw()
 			return {'FINISHED'}
 		else:
-			self.report({'INFO'}, "TIP: Opt+Click / Alt+Click to toggle all Cameras.")
+			# self.report({'INFO'}, "TIP: Opt+Click / Alt+Click to toggle all Cameras.")
 			return self.execute(context)
 
 
@@ -830,7 +874,7 @@ def render_images(scene, cameras_to_render):
 class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 	bl_idname = "camera_list.clear_scene_resolution"
 	bl_label = "Clear Custom Dimensions"
-	bl_description = "Restores the camera to default dimensions"
+	bl_description = "Restores the Camera to default dimensions. Shift+Click to restore all Cameras"
 	bl_options = {'UNDO'}
 	
 	camera_index: bpy.props.IntProperty()
@@ -851,13 +895,13 @@ class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 
 			resize_passepartout(camera, camera_item.x_dim, camera_item.y_dim)
 			
-			self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
+			# self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
 
 		return {'FINISHED'}
 
 
 	def invoke(self, context, event):
-		if event.alt:
+		if event.alt or event.shift:
 			# Clear custom resolution from all cameras
 			for camera_item in context.scene.cameras:
 			
@@ -1065,6 +1109,7 @@ def resize_passepartout(camera, width, height):
 
 
 
+
 @persistent
 def update_multiresolution_camera_frame(scene):
 	# Get the active object and check if it is a camera
@@ -1072,6 +1117,16 @@ def update_multiresolution_camera_frame(scene):
 
 	# Get existing passepartout, if there is one
 	passepartout = bpy.data.objects.get(key_passepartout)
+
+	update_camera_list(scene)
+	
+	if scene.sor_refresh_with_frame:
+		if scene.sor_show_only_render:
+			for obj in scene.objects:
+				obj.hide_set(obj.hide_render)
+		else:
+			for obj in scene.objects:
+				obj.hide_set(False)
 	
 	if active_object and active_object.type == 'CAMERA':
 		selected_camera = active_object
@@ -1119,11 +1174,30 @@ classes = (
 	RENDER_OT_render_custom_resolution,
 	RENDER_OT_confirm_dialog_render_all,
 	RENDER_OT_confirm_dialog_render_selected,
+
+	OBJECT_OT_toggle_disable_in_viewport,
 	
 	CAMERA_OT_RenderAnimations,
 	CAMERA_LIST_PT_animation_buttons,
-	CAMERA_OT_AnimateCameras,
+	CAMERA_OT_ProcessCameraRanges,
+	
 )
+
+
+def update_show_only_render(self, context):
+	if context.scene.sor_show_only_render:
+		for obj in context.scene.objects:
+			obj.hide_set(obj.hide_render)
+	else:
+		for obj in context.scene.objects:
+			obj.hide_set(False)
+
+@persistent
+def frame_change_handler(self, context):
+	# print("Frame changed:", context.scene.frame_current)
+	if context.scene.sor_refresh_with_frame:
+		# Call the update_show_only_render method with the current scene context
+		update_show_only_render(self, bpy.context)
 
 
 def register():
@@ -1155,9 +1229,12 @@ def register():
 	
 	# bpy.context.scene.custom_aspect_value = bpy.context.scene.render.resolution_x
 	
-	# Register the depsgraph update handler
+	# Register the depsgraph update handlers
 	bpy.app.handlers.depsgraph_update_post.append(update_multiresolution_camera_frame)
-	bpy.app.handlers.depsgraph_update_post.append(update_camera_list)
+	bpy.app.handlers.frame_change_post.append(frame_change_handler)
+
+	bpy.types.Scene.sor_show_only_render = bpy.props.BoolProperty(name="Show Only Render", default = False, description="Show only renderable objects", update=update_show_only_render)	
+	bpy.types.Scene.sor_refresh_with_frame = bpy.props.BoolProperty(name="Frame Change Refresh", default = True, description="Refresh visibility of objects in scene when frame changes", update=frame_change_handler)
 
 
 
@@ -1174,11 +1251,18 @@ def unregister():
 		bpy.data.objects.remove(passepartout, do_unlink=True)
 	
 	# Unregister the depsgraph update handler
-	bpy.app.handlers.depsgraph_update_post.remove(update_multiresolution_camera_frame)	
-	bpy.app.handlers.depsgraph_update_post.remove(update_camera_list)
+	bpy.app.handlers.depsgraph_update_post.remove(update_multiresolution_camera_frame)
+	bpy.app.handlers.frame_change_post.remove(frame_change_handler)
 	
 	# Remove the custom_aspect_value property
 	# del bpy.types.Scene.custom_aspect_value
+	
+	del bpy.types.Scene.sor_show_only_render
+	del bpy.types.Scene.sor_refresh_with_frame
+	
+	
+
+	
 
 if __name__ == "__main__":
 	register()
