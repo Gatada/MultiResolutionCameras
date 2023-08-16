@@ -19,7 +19,7 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 0, 27),
+	"version": (3, 0, 32),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Manage and preview camera resolutions and animation sequences.",
@@ -56,7 +56,7 @@ def on_highlighted_camera_index_update(self, context):
 
 class CameraListProperties(bpy.types.PropertyGroup):
 	highlighted_camera_index: bpy.props.IntProperty(
-		name="Click to modify dimensions",
+		name="Double-click to edit camera name",
 		update=on_highlighted_camera_index_update
 	)
 
@@ -432,6 +432,8 @@ class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
 		
 		# Find all cameras with valid frame ranges in their names
 		scene.cameras_with_frame_range.clear()
+		
+		print("\nUpdating Camera Ranges for each Camera in Scene:")
 
 		for camera_data in scene.cameras:
 			camera = bpy.data.objects.get(camera_data.name)
@@ -460,7 +462,7 @@ class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
 		# Sort cameras based on their frame ranges
 		scene.cameras_with_frame_range.sort(key=lambda x: (x[1], x[2]))
 		number_of_cameras_in_sequence = len(scene.cameras_with_frame_range)
-		print(f"\nFound {number_of_cameras_in_sequence} cameras in the scene with a correctly formatted frame range.")
+		print(f"\nFound {number_of_cameras_in_sequence} cameras in the scene with a correctly formatted frame range.\n")
 		
 		return {'FINISHED'}
 
@@ -633,8 +635,8 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				
 				if not context.scene.move_focus_with_keys:	
 					
-					# Add camera to row only when user is not using highlight to select camera:
-					# The added operator makes the camera the current rendering camera when clicked
+					# Add camera icon to row only when user is not using highlight to select camera:
+					# Click operator to make the camera the current rendering camera
 					
 					camera_select_op = row.operator("scene.highlight_and_select_camera", text="", icon='OUTLINER_DATA_CAMERA', emboss=False)
 					camera_select_op.camera_name = camera_item.name
@@ -655,6 +657,7 @@ class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
 	row_index: bpy.props.IntProperty()
 	
 	def execute(self, context):
+		# print(f"Context: {context}")
 		bpy.context.scene.camera_list.highlighted_camera_index = self.row_index
 		bpy.ops.scene.select_camera(camera_name=self.camera_name, row_index=self.row_index)
 		return {'FINISHED'}
@@ -1040,7 +1043,12 @@ def populate_camera_list(scene, depsgraph=None):
 			item.name = obj.name
 	
 def update_camera_list_highlight_if_camera_was_changed_outside_the_list(scene):
-	print("Updating camera highlight..")
+	
+	# This code should only be run when the user clicks outside the camera list,
+	# but I'm not sure how I can tell where the user clicked..
+	
+	# print(f"Updating camera highlight: {bpy.context} {bpy.context.area} {bpy.context.region}.")
+	
 	selected_camera = bpy.context.active_object
 	if selected_camera and selected_camera.type == 'CAMERA':
 		camera_list = scene.camera_list
@@ -1133,6 +1141,7 @@ def update_multiresolution_camera_frame(scene):
 	# Get existing passepartout, if there is one
 	passepartout = bpy.data.objects.get(key_passepartout)
 
+	# Maybe better to not do this every time, but rather have a refresh button?
 	populate_camera_list(scene)
 
 	# Update visibility of objects in scene if needed
@@ -1145,8 +1154,10 @@ def update_multiresolution_camera_frame(scene):
 			selected_row = scene.camera_list.highlighted_camera_index
 			selected_camera_item = scene.cameras[selected_row]
 			
+			# print(f"Clicked index {selected_row}")
+			
 			if selected_camera.name != selected_camera_item.name:
-				print(f"Names: {selected_camera.name} != {selected_camera_item.name}")
+				# print(f"Names: {selected_camera.name} != {selected_camera_item.name}")
 				update_camera_list_highlight_if_camera_was_changed_outside_the_list(scene)
 
 		# Check if the selected camera is in the list of cameras with custom dimensions
