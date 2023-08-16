@@ -19,7 +19,7 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 0, 0),
+	"version": (3, 0, 7),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Easily customize resolutions and render your cameras.",
@@ -46,7 +46,13 @@ def on_highlighted_camera_index_update(self, context):
 		selected_camera_item = context.scene.cameras[selected_row]
 		camera_name = selected_camera_item.name
 		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
+		
 
+bpy.types.Scene.refresh_visibility_needed = BoolProperty(
+	name="Visibility Update",
+	description="Updates Visibility of objects in scene when true",
+	default=False
+)
 
 class CameraListProperties(bpy.types.PropertyGroup):
 	highlighted_camera_index: bpy.props.IntProperty(
@@ -172,9 +178,10 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 		return obj is not None and (("x_dim" in obj.keys() and obj["x_dim"] is not None) or ("y_dim" in obj.keys() and obj["y_dim"] is not None))
 
 
-class OBJECT_OT_toggle_disable_in_viewport(bpy.types.Operator):
-		bl_idname = "object.toggle_disable_in_viewport"
+class OBJECT_OT_refresh_visbility_of_objects_in_scene(bpy.types.Operator):
+		bl_idname = "object.refresh_visbility_of_objects_in_scene"
 		bl_label = "Refresh Visibility"
+		bl_description = "Will refresh objects Viewport visibility according to Disabled in Renders state"
 		
 		def execute(self, context):
 			if context.scene.sor_show_only_render:
@@ -222,7 +229,7 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 			box.enabled = context.scene.sor_show_only_render
 			
 			row = box.row()
-			row.operator("object.toggle_disable_in_viewport")
+			row.operator("object.refresh_visbility_of_objects_in_scene")
 			
 			row = box.row()
 			row.prop(bpy.context.scene, "sor_refresh_with_frame", text="Frame Auto-Refresh")
@@ -1119,14 +1126,8 @@ def update_multiresolution_camera_frame(scene):
 	passepartout = bpy.data.objects.get(key_passepartout)
 
 	update_camera_list(scene)
+	update_visibility_if_needed(self, bpy.context)
 	
-	if scene.sor_refresh_with_frame:
-		if scene.sor_show_only_render:
-			for obj in scene.objects:
-				obj.hide_set(obj.hide_render)
-		else:
-			for obj in scene.objects:
-				obj.hide_set(False)
 	
 	if active_object and active_object.type == 'CAMERA':
 		selected_camera = active_object
@@ -1175,7 +1176,7 @@ classes = (
 	RENDER_OT_confirm_dialog_render_all,
 	RENDER_OT_confirm_dialog_render_selected,
 
-	OBJECT_OT_toggle_disable_in_viewport,
+	OBJECT_OT_refresh_visbility_of_objects_in_scene,
 	
 	CAMERA_OT_RenderAnimations,
 	CAMERA_LIST_PT_animation_buttons,
@@ -1184,20 +1185,29 @@ classes = (
 )
 
 
-def update_show_only_render(self, context):
-	if context.scene.sor_show_only_render:
-		for obj in context.scene.objects:
-			obj.hide_set(obj.hide_render)
-	else:
-		for obj in context.scene.objects:
-			obj.hide_set(False)
+def update_visibility_if_needed(self, context):
+	if context.scene.refresh_visibility_needed:
+		if context.scene.sor_show_only_render:
+			for obj in context.scene.objects:
+				obj.hide_set(obj.hide_render)
+		else:
+			for obj in context.scene.objects:
+				obj.hide_set(False)
 
 @persistent
 def frame_change_handler(self, context):
-	# print("Frame changed:", context.scene.frame_current)
-	if context.scene.sor_refresh_with_frame:
-		# Call the update_show_only_render method with the current scene context
-		update_show_only_render(self, bpy.context)
+	# Only called when the frame changes.
+	if context.scene.sor_show_only_render and context.scene.sor_refresh_with_frame:
+		context.scene.refresh_visibility_needed = True
+		update_visibility_if_needed(self, bpy.context)
+		context.scene.refresh_visibility_needed = False
+
+def show_only_render_was_updated(self, context):
+		# Only called when context.scene.sor_show_only_render changes
+		context.scene.refresh_visibility_needed = True
+		update_visibility_if_needed(self, bpy.context)
+		context.scene.refresh_visibility_needed = False
+
 
 
 def register():
@@ -1233,8 +1243,8 @@ def register():
 	bpy.app.handlers.depsgraph_update_post.append(update_multiresolution_camera_frame)
 	bpy.app.handlers.frame_change_post.append(frame_change_handler)
 
-	bpy.types.Scene.sor_show_only_render = bpy.props.BoolProperty(name="Show Only Render", default = False, description="Show only renderable objects", update=update_show_only_render)	
-	bpy.types.Scene.sor_refresh_with_frame = bpy.props.BoolProperty(name="Frame Change Refresh", default = True, description="Refresh visibility of objects in scene when frame changes", update=frame_change_handler)
+	bpy.types.Scene.sor_show_only_render = bpy.props.BoolProperty(name="Show Only Render", default = False, description="Show only renderable objects", update=show_only_render_was_updated)	
+	bpy.types.Scene.sor_refresh_with_frame = bpy.props.BoolProperty(name="Frame Change Refresh", default = False, description="Refresh visibility of objects in scene when frame changes", update=frame_change_handler)
 
 
 
