@@ -19,10 +19,10 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 0, 10),
+	"version": (3, 0, 27),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
-	"description": "Easily customize resolutions and render your cameras.",
+	"description": "Manage and preview camera resolutions and animation sequences.",
 	"category": "3D View",
 }
 
@@ -39,12 +39,11 @@ key_mesh = "Multi-Resolution Camera Mesh"
 key_passepartout = "Multi-Resolution Camera Frame"
 
 
-bpy.types.Scene.refresh_visibility_needed = BoolProperty(
+bpy.types.Scene.objects_visibility_refresh_is_needed = BoolProperty(
 	name="Visibility Update",
-	description="Updates Visibility of objects in scene when true",
+	description="The need to update the Visibility State of Objects in Scene",
 	default=False
 )
-
 
 def on_highlighted_camera_index_update(self, context):
 	scene = context.scene	
@@ -57,15 +56,15 @@ def on_highlighted_camera_index_update(self, context):
 
 class CameraListProperties(bpy.types.PropertyGroup):
 	highlighted_camera_index: bpy.props.IntProperty(
-		name="Click to modify dimensions.",
+		name="Click to modify dimensions",
 		update=on_highlighted_camera_index_update
 	)
 
 
-class CAMERA_LIST_OT_clear_custom_size(bpy.types.Operator):
-	bl_idname = "camera_list.reset_custom_dimension"
-	bl_label = "Reset Width of Render Border"
-	bl_description = "Restores default scene value"
+class CAMERA_LIST_clear_custom_render_size(bpy.types.Operator):
+	bl_idname = "camera_list.clear_custom_dimension"
+	bl_label = "Reset size of Render Border"
+	bl_description = "Restores Camera to default render size"
 	
 	clear_dimension: bpy.props.StringProperty()
 	
@@ -78,7 +77,7 @@ class CAMERA_LIST_OT_clear_custom_size(bpy.types.Operator):
 				
 		camera = bpy.data.objects[camera_name]
 		if not camera or camera.type != "CAMERA":
-			self.report({'WARNING'}, f"Camera {camera_name} not found - width not reset.")
+			self.report({'WARNING'}, f"Camera {camera_name} not found - width not reset")
 			return {'CANCELLED'}
 		
 		if self.clear_dimension == "width":
@@ -97,23 +96,25 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 	# Used to store the unique name of the camera
 	name: bpy.props.StringProperty()
 
-	def get_use_camera(self):
+	def get_selected_for_rendering(self):
 		obj = bpy.data.objects.get(self.name)
 		if obj is not None and "use_camera" in obj.keys() and obj["use_camera"] is not None:
 			return obj["use_camera"]
 		else:
 			return True
 
-	def set_use_camera(self, value):
+	def set_selected_for_rendering(self, value):
 		obj = bpy.data.objects.get(self.name)
 		if value in {True, False} and obj is not None and obj.type == "CAMERA":
 			obj["use_camera"] = value
-			
-	use_camera: bpy.props.BoolProperty(
+	
+	# Cameras selected for rendering
+	selected_for_rendering: bpy.props.BoolProperty(
 		name="Toggle camera membership of a subset used for rendering",
-		get=get_use_camera,
-		set=set_use_camera,
+		get=get_selected_for_rendering,
+		set=set_selected_for_rendering,
 	)
+	
 
 	def get_x_dim(self):
 		obj = bpy.data.objects.get(self.name)
@@ -260,7 +261,7 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		
 		# The "Adjust Lens Clip to show Render Border" checkbox
 		row = layout.row()
-		row.prop(scene, "move_focus_with_keys", text="Highlight selects Camera")
+		row.prop(scene, "move_focus_with_keys", text="Highlight select Camera")
 		
 		# The "Adjust Lens Clip to show Render Border" checkbox
 		row = layout.row()
@@ -345,14 +346,14 @@ bpy.types.Scene.append_resolution = BoolProperty(
 
 bpy.types.Scene.is_previewing_animation = BoolProperty(
 	name="Use Camera Frameranges",
-	description="Camera frame range and current frame sets active camera",
+	description="Frame Range in Camera name (e.g.: Camera 1-10) sets active camera based on current frame",
 	default=False,
 	update=update_previewing_animation
 )
 
 # bpy.types.Scene.adjust_render_size = BoolProperty(
 # 	name="Adjust render size",
-# 	description="The aspect ratio will be ratined.",
+# 	description="The aspect ratio will be ratined",
 # 	default=False,
 # 	update=update_render_size,
 # )
@@ -383,7 +384,7 @@ bpy.types.Scene.is_previewing_animation = BoolProperty(
 
 # bpy.types.Scene.custom_aspect_value = IntProperty(
 # 	name="Size of selected side",
-# 	description="Enter the length of the fixed side.",
+# 	description="Enter the length of the fixed side",
 # )
 
 # bpy.types.Scene.custom_aspect_value = bpy.props.IntProperty(
@@ -424,7 +425,7 @@ bpy.app.handlers.frame_change_pre.append(update_active_camera)
 class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
 	bl_idname = "camera.process_frame_ranges"
 	bl_label = "Process Camera Ranges"
-	bl_description = "Execute to process the frame ranges of each camera in the scene"
+	bl_description = "Execute to refresh frame ranges for all cameras. Range format: <Start>-<End> (e.g. Camera 1-1240)"
 	
 	def execute(self, context):
 		scene = context.scene
@@ -467,7 +468,7 @@ class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
 class CAMERA_OT_RenderAnimations(bpy.types.Operator):
 		bl_idname = "camera.render_animations"
 		bl_label = "Render Ranged Animations"
-		bl_description = "Render the animations from each camera in the scene using the frame range suffix."
+		bl_description = "Render the animations from each camera in the scene using the frame range suffix"
 		
 		# Valid values: "CYCLES", "BLENDER_EEVEE", "BLENDER_WORKBENCH"
 		render_engine: bpy.props.StringProperty()
@@ -553,11 +554,11 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 				# Add X and Y dimension text fields and reset buttons
 				row = layout.row(align=True)
 				row.prop(camera_item, "x_dim", text="Width")
-				row.operator("camera_list.reset_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="width"
+				row.operator("camera_list.clear_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="width"
 	
 				row = layout.row(align=True)
 				row.prop(camera_item, "y_dim", text="Height")
-				row.operator("camera_list.reset_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="height"
+				row.operator("camera_list.clear_custom_dimension", text="", icon="LOOP_BACK").clear_dimension="height"
 					
 		else:
 			# Draw the update button spanning two columns
@@ -567,15 +568,11 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 	
 		# Render buttons
 		
-		selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.use_camera]
+		selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering]
 		selected_camera_count = len(selected_camera_items)
 		
-		if selected_camera_count > 0:
-			render_selection_text = f"Render {selected_camera_count}"
-			render_selection_toggle = True			
-		else:
-			render_selection_text = ""
-			render_selection_toggle = False
+		render_selection_text = f"Render {selected_camera_count}"
+		render_selection_toggle = selected_camera_count > 0
 		
 		row = layout.row(align=True)
 		
@@ -597,7 +594,7 @@ bpy.types.Object.y_dim = bpy.props.IntProperty(
 		)
 		
 def get_selected_camera_count():
-		selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.use_camera]
+		selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering]
 		camera_count = len(selected_camera_items)
 		return f"Render {camera_count}"
 
@@ -616,7 +613,7 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 				# CHECKBOX: Toggles the selected state of a camera, allowing user
 				# to decide to include or exclude it from Render Selected
 				
-				use_camera_checkbox = 'CHECKBOX_HLT' if camera_item.use_camera else 'CHECKBOX_DEHLT'
+				use_camera_checkbox = 'CHECKBOX_HLT' if camera_item.selected_for_rendering else 'CHECKBOX_DEHLT'
 				row.operator("camera_list.toggle_use_camera", text="", icon=use_camera_checkbox, emboss=False).camera_name = item.name
 
 				# NAME: Name of the camera
@@ -698,13 +695,13 @@ class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 							self.report({'INFO'}, f"Adjusted camera clip start to: {maximum_clip_start_to_avoid_hiding_render_border}")
 						else:
 							rounded_value = round(maximum_clip_start_to_avoid_hiding_render_border, 4)
-							self.report({'WARNING'}, f"Reduce Camera Lens Clip Start to below {rounded_value} if the Render Border is clipped (hidden).")
+							self.report({'WARNING'}, f"Reduce Camera Lens Clip Start to below {rounded_value} if the Render Border is clipped (hidden)")
 					else:
 						rounded_x = round(camera.scale.x, 6)
 						rounded_y = round(camera.scale.y, 6)
 						rounded_z = round(camera.scale.z, 6)				
 						if not (rounded_x == rounded_y == rounded_z):
-							self.report({'WARNING'}, "Non-uniform camera scale affects the Multi-Camera Render Border and rendering result.")
+							self.report({'WARNING'}, "Non-uniform camera scale affects the Multi-Camera Render Border and rendering result")
 							
 					break
 
@@ -739,9 +736,9 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 	def execute(self, context):
 		camera_item = context.scene.cameras[self.camera_name]
 		if camera_item is None:
-			self.report({'WARNING'}, f"Failed to toggle camera - {self.camera_name} not found.")
+			self.report({'WARNING'}, f"Failed to toggle camera - {self.camera_name} not found")
 			return {'CANCELLED'}
-		camera_item.use_camera = not camera_item.use_camera
+		camera_item.selected_for_rendering = not camera_item.selected_for_rendering
 		context.area.tag_redraw()
 		return {'FINISHED'}
 	
@@ -750,14 +747,14 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 			# Toggle selection state to all cameras
 			camera_item = context.scene.cameras[self.camera_name]
 			if camera_item is not None:
-				camera_item.use_camera = not camera_item.use_camera
-				new_toggle_state = camera_item.use_camera
+				camera_item.selected_for_rendering = not camera_item.selected_for_rendering
+				new_toggle_state = camera_item.selected_for_rendering
 				for camera_item in context.scene.cameras:
-					camera_item.use_camera = new_toggle_state
+					camera_item.selected_for_rendering = new_toggle_state
 				context.area.tag_redraw()
 			return {'FINISHED'}
 		else:
-			# self.report({'INFO'}, "TIP: Opt+Click / Alt+Click to toggle all Cameras.")
+			# self.report({'INFO'}, "TIP: Opt+Click / Alt+Click to toggle all Cameras")
 			return self.execute(context)
 
 
@@ -793,7 +790,7 @@ class RENDER_OT_render_custom_resolution(bpy.types.Operator):
 				# Set the active camera to the selected camera
 				context.scene.camera = camera
 	
-				self.report({'INFO'}, f"Rendering {camera.name} - interface will become unresponsive.")
+				self.report({'INFO'}, f"Rendering {camera.name} - interface will become unresponsive")
 	
 				# Render the image
 				bpy.ops.render.render('EXEC_DEFAULT', write_still=True)
@@ -808,7 +805,7 @@ class RENDER_OT_render_custom_resolution(bpy.types.Operator):
 				# Update the area to refresh the UI
 				context.area.tag_redraw()
 				
-				self.report({'INFO'}, f"Rendered camera to Blender Render window (may not update automatically).")
+				self.report({'INFO'}, f"Rendered camera to Blender Render window (may not update automatically)")
 	
 		return {'FINISHED'}
 
@@ -914,7 +911,7 @@ class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 
 			resize_passepartout(camera, camera_item.x_dim, camera_item.y_dim)
 			
-			# self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras.")
+			# self.report({'INFO'}, "You can Opt+Click / Alt+Click to clear custom resolution from all cameras")
 
 		return {'FINISHED'}
 
@@ -998,7 +995,7 @@ class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
 		
 		def execute(self, context):
 			scene = context.scene
-			selected_camera_items = [camera_item for camera_item in scene.cameras if camera_item.use_camera]
+			selected_camera_items = [camera_item for camera_item in scene.cameras if camera_item.selected_for_rendering]
 			if not selected_camera_items:
 				self.report({'WARNING'}, "No cameras selected")
 				return {'CANCELLED'}
@@ -1008,11 +1005,11 @@ class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
 			return {'FINISHED'}
 		
 		def invoke(self, context, event):
-			selected_camera_count = len([camera_item for camera_item in bpy.context.scene.cameras if camera_item.use_camera])
+			selected_camera_count = len([camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering])
 			if selected_camera_count > 0:
 				return context.window_manager.invoke_props_dialog(self, width=200)
 			else:
-				self.report({'WARNING'}, "Please select at least one Camera from the list above.")
+				self.report({'WARNING'}, "Please select at least one Camera from the list above")
 				return {"CANCELLED"}
 		
 		def draw(self, context):
@@ -1026,7 +1023,7 @@ class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
 			col.label(text="Try Ctrl+C in Python Console")
 			col.label(text="to cancel the rendering.")
 			
-			selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.use_camera]
+			selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering]
 			camera_count = len(selected_camera_items)
 									
 			col = layout.column()
@@ -1037,18 +1034,13 @@ class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
 @persistent
 def populate_camera_list(scene, depsgraph=None):
 	scene.cameras.clear()
-
 	for obj in scene.objects:
 		if obj.type == 'CAMERA':
 			item = scene.cameras.add()
 			item.name = obj.name
-			# The other properties have a default value.
-			
-	update_highlight_in_camera_list(scene)
 	
-
-def update_highlight_in_camera_list(scene):
-	# Selecting camera in list if it was selected elsewhere:
+def update_camera_list_highlight_if_camera_was_changed_outside_the_list(scene):
+	print("Updating camera highlight..")
 	selected_camera = bpy.context.active_object
 	if selected_camera and selected_camera.type == 'CAMERA':
 		camera_list = scene.camera_list
@@ -1141,14 +1133,21 @@ def update_multiresolution_camera_frame(scene):
 	# Get existing passepartout, if there is one
 	passepartout = bpy.data.objects.get(key_passepartout)
 
-	if not context.scene.move_focus_with_keys:
-		update_highlight_in_camera_list(scene)
-	
+	populate_camera_list(scene)
+
 	# Update visibility of objects in scene if needed
 	update_objects_visibility_if_needed(bpy.context)
 	
 	if active_object and active_object.type == 'CAMERA':
 		selected_camera = active_object
+		
+		if not scene.move_focus_with_keys:
+			selected_row = scene.camera_list.highlighted_camera_index
+			selected_camera_item = scene.cameras[selected_row]
+			
+			if selected_camera.name != selected_camera_item.name:
+				print(f"Names: {selected_camera.name} != {selected_camera_item.name}")
+				update_camera_list_highlight_if_camera_was_changed_outside_the_list(scene)
 
 		# Check if the selected camera is in the list of cameras with custom dimensions
 		custom_camera = bpy.context.scene.cameras.get(selected_camera.name)
@@ -1181,7 +1180,7 @@ classes = (
 	CAMERA_UL_custom_resolution_camera_list,
 	
 	CAMERA_LIST_OT_clear_custom_resolution,
-	CAMERA_LIST_OT_clear_custom_size,
+	CAMERA_LIST_clear_custom_render_size,
 	CAMERA_LIST_OT_toggle_use_camera,
 	CAMERA_LIST_OT_select_camera,
 	CAMERA_LIST_OT_highlight_and_select_camera,
@@ -1204,7 +1203,7 @@ classes = (
 
 
 def update_objects_visibility_if_needed(context):
-	if context.scene.refresh_visibility_needed:
+	if context.scene.objects_visibility_refresh_is_needed:
 		if context.scene.sor_show_only_render:
 			for obj in context.scene.objects:
 				obj.hide_set(obj.hide_render)
@@ -1216,15 +1215,15 @@ def update_objects_visibility_if_needed(context):
 def frame_change_handler(self, context):
 	# Only called when the frame changes.
 	if context.scene.sor_show_only_render and context.scene.sor_refresh_with_frame:
-		context.scene.refresh_visibility_needed = True
+		context.scene.objects_visibility_refresh_is_needed = True
 		update_objects_visibility_if_needed(bpy.context)
-		context.scene.refresh_visibility_needed = False
+		context.scene.objects_visibility_refresh_is_needed = False
 
 def show_only_render_was_updated(self, context):
 		# Only called when context.scene.sor_show_only_render changes
-		context.scene.refresh_visibility_needed = True
+		context.scene.objects_visibility_refresh_is_needed = True
 		update_objects_visibility_if_needed(bpy.context)
-		context.scene.refresh_visibility_needed = False
+		context.scene.objects_visibility_refresh_is_needed = False
 
 
 
