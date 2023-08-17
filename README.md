@@ -31,7 +31,7 @@ The add-on presents you with 3 panels under a new Cameras tab shown in your 3D V
 
 * **Camera List**: Shows your current cameras and allows you to customize.
 * **Settings Panel**: Preferences to customize this Add-on.
-* **Animation Panel**: A set of options and actions to help you reasily preview your render multi-camera animation sequences in the 3D Viewport, and render them out.
+* **Animation Panel**: A set of options and actions to help you easily preview and render multi-camera animation sequences.
 
 ## Camera List
 For each camera row you will find:
