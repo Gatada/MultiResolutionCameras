@@ -79,7 +79,7 @@ If you are working on a multi-camera sequence and need to quickly see it animate
 4. **Show Only Render**: When ticked, all objects in the scene that are disabled from renders based on the current frame, will be hidden from the Viewport. Basically this option will make the scene shown in the 3D Viewport look more like your final render.
 5. There is a button to refresh the visibility of the objects in the scene, however you also enable "Frame Auto-Refresh" which will refresh the visibility of the objects ever time the frame is changed. This is nice when previewing animation sequences in the Viewport.
 
-That's it! Thanks for checking out my first add-on for Blender. It took an entire week to make, and it turned into everything I wanted it to be. I'm very happy about it.
+That's it! Thanks for checking out my first add-on for Blender. I have spend weeks on this, an so far it has turned into everything I wanted it to be—and then some. I'm very happy about it. I will probably keep adding features to it as I need them.
 
 I hope you find it useful!
 
