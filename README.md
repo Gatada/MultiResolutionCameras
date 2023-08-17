@@ -3,6 +3,8 @@ This is a Blender add-on written to easily customize render resolutions, and ren
 
 * Set a custom render resolution for the cameras in the scene, without impacting the scene rendering resolution/aspect.
 * Easily render a still for a camera with the custom resolution.
+* Easily preview multi-camera animation sequences in the 3D Viewport.
+* Easily render sequences.
 
 But what makes the add-on cool is that you can preview the render right there in the viewport, as a frame is added to the camera which updates in real-time while you adjust the size and ratio of the render.
 
