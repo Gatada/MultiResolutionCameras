@@ -58,14 +58,14 @@ def on_highlighted_camera_index_update(self, context):
 		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
 
 
-class CameraListProperties(bpy.types.PropertyGroup):
+class JB_MULTICAM_PG_CAMERALIST_HighlightTooltip(bpy.types.PropertyGroup):
 	highlighted_camera_index: bpy.props.IntProperty(
 		name="Double-click to edit camera name",
 		update=on_highlighted_camera_index_update
 	)
 
 
-class CAMERA_LIST_clear_custom_render_size(bpy.types.Operator):
+class JB_MULTICAM_OT_CAMERALIST_clear_custom_render_size(bpy.types.Operator):
 	bl_idname = "camera_list.clear_custom_dimension"
 	bl_label = "Reset size of Render Border"
 	bl_description = "Restores Camera to default render size"
@@ -95,7 +95,7 @@ class CAMERA_LIST_clear_custom_render_size(bpy.types.Operator):
 
 
 
-class CameraItemProperties(bpy.types.PropertyGroup):
+class JB_MULTICAM_PG_CAMERALIST_CameraItem(bpy.types.PropertyGroup):
 	
 	# Used to store the unique name of the camera
 	name: bpy.props.StringProperty()
@@ -183,10 +183,10 @@ class CameraItemProperties(bpy.types.PropertyGroup):
 		return obj is not None and (("x_dim" in obj.keys() and obj["x_dim"] is not None) or ("y_dim" in obj.keys() and obj["y_dim"] is not None))
 
 
-class OBJECT_OT_refresh_visbility_of_objects_in_scene(bpy.types.Operator):
+class JB_MULTICAM_OT_update_viewport_visibility(bpy.types.Operator):
 		bl_idname = "object.refresh_visbility_of_objects_in_scene"
 		bl_label = "Refresh Visibility"
-		bl_description = "Will refresh objects Viewport visibility according to Disabled in Renders state"
+		bl_description = "Will refresh objects Viewport visibility according to state of Disabled in Renders (camera with cross)"
 		
 		def execute(self, context):
 			if context.scene.sor_show_only_render:
@@ -195,7 +195,7 @@ class OBJECT_OT_refresh_visbility_of_objects_in_scene(bpy.types.Operator):
 			return {'FINISHED'}
 
 
-class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
+class JB_MULTICAM_PT_animation_panel(bpy.types.Panel):
 		bl_label = "Animation"
 		bl_idname = "VIEW3D_PT_animation_actions"
 		bl_space_type = 'VIEW_3D'
@@ -247,7 +247,7 @@ class CAMERA_LIST_PT_animation_buttons(bpy.types.Panel):
 			
 			
 
-class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
+class JB_MULTICAM_PT_addon_settings(bpy.types.Panel):
 	bl_label = "Settings"
 	bl_idname = "VIEW3D_PT_feature_list"
 	bl_space_type = 'VIEW_3D'
@@ -267,12 +267,11 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		# row.label(text="Camera name:")
 		# row.prop(scene, "reformat_camera_name", text="")
 		
-		
-		# The "Adjust Lens Clip to show Render Border" checkbox
+		# The "Highlight select Camera" checkbox
 		row = layout.row()
 		row.prop(scene, "move_focus_with_keys", text="Highlight select Camera")
 		
-		# The "Adjust Lens Clip to show Render Border" checkbox
+		# The "Adjust Lens Clip if needed" checkbox
 		row = layout.row()
 		row.prop(scene, "adjust_lens_clip", text="Adjust Lens Clip if needed")
 
@@ -280,7 +279,7 @@ class CAMERA_LIST_PT_extra_features(bpy.types.Panel):
 		row = layout.row()
 		row.prop(scene, "always_show_render_border", text="Always show Render Border")				
 		
-		# The "Append Resolution to Image Name" checkbox
+		# The "Filename includes Resolution" checkbox
 		row = layout.row()
 		row.prop(scene, "append_resolution", text="Filename includes Resolution")
 		
@@ -355,7 +354,7 @@ bpy.types.Scene.append_resolution = BoolProperty(
 
 bpy.types.Scene.is_previewing_animation = BoolProperty(
 	name="Use Camera Frameranges",
-	description="Frame Range in Camera name (e.g.: Camera 1-10) sets active camera based on current frame",
+	description="When enabled, Active Scene Camera is set according to Frame Range in Camera name (e.g.: Camera 1-10)",
 	default=False,
 	update=update_previewing_animation
 )
@@ -404,13 +403,13 @@ bpy.types.Scene.is_previewing_animation = BoolProperty(
 # 	soft_max=10000,
 # )
 
-class PROCESS_OT_all_cameras(bpy.types.Operator):
-	bl_idname = "camera_list.process_all_cameras"
-	bl_label = "Process All Cameras"
-	
-	def execute(self, context):
-		# Your code to process all cameras
-		return {'FINISHED'}
+# class PROCESS_OT_all_cameras(bpy.types.Operator):
+# 	bl_idname = "camera_list.process_all_cameras"
+# 	bl_label = "Process All Cameras"
+# 	
+# 	def execute(self, context):
+# 		# Your code to process all cameras
+# 		return {'FINISHED'}
 
 
 # Custom property to track the state of the "Preview Animation" button
@@ -434,10 +433,10 @@ bpy.app.handlers.frame_change_pre.append(update_active_camera)
 
 
 # Operator to render all frames in custom resolution using current scene camera
-class CAMERA_OT_RenderSceneCameraFramesWithCustomResolution(bpy.types.Operator):
+class JB_MULTICAM_OT_render_current_scene_camera_with_custom_resolution(bpy.types.Operator):
 	bl_idname = "camera.render_scene_camera_frames_with_custom_resolution"
 	bl_label = "Render Scene Frames"
-	bl_description = "Renders the entire animation using the current Scene Camera in the associated custom resolution (if any)."
+	bl_description = "Renders the entire animation using the current Scene Camera in the associated custom resolution (if any)"
 	
 	def execute(self, context):
 		current_camera_name = context.scene.camera.name
@@ -453,7 +452,7 @@ class CAMERA_OT_RenderSceneCameraFramesWithCustomResolution(bpy.types.Operator):
 
 
 # Operator to animate cameras based on their frame ranges
-class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
+class JB_MULTICAM_OT_update_frame_ranges_for_all_cameras(bpy.types.Operator):
 	bl_idname = "camera.process_frame_ranges"
 	bl_label = "Process Camera Ranges"
 	bl_description = "Execute to refresh frame ranges for all cameras. Range format: <Start>-<End> (e.g. Camera 1-1240)"
@@ -498,10 +497,10 @@ class CAMERA_OT_ProcessCameraRanges(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class CAMERA_OT_RenderAnimations(bpy.types.Operator):
+class JB_MULTICAM_OT_render_animation_sequence(bpy.types.Operator):
 		bl_idname = "camera.render_animations"
 		bl_label = "Render Ranged Animations"
-		bl_description = "Render the animations from each camera in the scene using the frame range suffix"
+		bl_description = "Render the animations from each camera in the scene using the frame range suffix (e.g.: Camera 1-10, Camera 11-20)"
 		
 		# Valid values: "CYCLES", "BLENDER_EEVEE", "BLENDER_WORKBENCH"
 		render_engine: bpy.props.StringProperty()
@@ -558,7 +557,7 @@ class CAMERA_OT_RenderAnimations(bpy.types.Operator):
 			
 			
 			
-class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
+class JB_MULTICAM_PT_camera_list(bpy.types.Panel):
 	bl_label = "Camera List"	
 	bl_idname = "VIEW3D_PT_camera_list"
 	bl_space_type = 'VIEW_3D'
@@ -575,7 +574,7 @@ class CAMERA_LIST_PT_render_panel(bpy.types.Panel):
 		# The List of Cameras
 		
 		row = layout.row()
-		row.template_list("CAMERA_UL_custom_resolution_camera_list", "", scene, "cameras", camera_list, "highlighted_camera_index", rows=5)
+		row.template_list("JB_MULTICAM_UL_CAMERALIST_TEMPLATE_camera_list_item", "", scene, "cameras", camera_list, "highlighted_camera_index", rows=5)
 		
 		# The dimensions of the render border
 	
@@ -633,7 +632,7 @@ def get_selected_camera_count():
 
 
 
-class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
+class JB_MULTICAM_UL_CAMERALIST_TEMPLATE_camera_list_item(bpy.types.UIList):
 	def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
 		if self.layout_type in {'DEFAULT', 'COMPACT'}:
 			scene = context.scene
@@ -680,7 +679,7 @@ class CAMERA_UL_custom_resolution_camera_list(bpy.types.UIList):
 
 
 
-class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
+class JB_MULTICAM_OT_CAMERALIST_highlight_and_select_camera(bpy.types.Operator):
 	bl_idname = "scene.highlight_and_select_camera"
 	bl_label = "Highlight Camera in Camera List and make it Scene Camera"
 	
@@ -694,7 +693,7 @@ class CAMERA_LIST_OT_highlight_and_select_camera(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
+class JB_MULTICAM_OT_CAMERALIST_select_camera(bpy.types.Operator):
 	bl_idname = "scene.select_camera"
 	bl_label = "Select Camera"
 
@@ -745,7 +744,7 @@ class CAMERA_LIST_OT_select_camera(bpy.types.Operator):
 		
 
 
-class CAMERA_LIST_OT_initialize_camera_list(bpy.types.Operator):
+class JB_MULTICAM_OT_initialize_camera_list(bpy.types.Operator):
 	bl_idname = "scene.initialize_camera_list_operator"
 	bl_label = "Refresh Camera List"
 
@@ -760,7 +759,7 @@ class CAMERA_LIST_OT_initialize_camera_list(bpy.types.Operator):
 
 
 
-class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
+class JB_MULTICAM_OT_CAMERALIST_toggle_use_camera(bpy.types.Operator):
 	bl_idname = "camera_list.toggle_use_camera"
 	bl_label = "Toggle Selection"
 	bl_description = "Enable to include Camera when using Render Selected below. Shift+Click to toggle all Cameras"
@@ -793,7 +792,7 @@ class CAMERA_LIST_OT_toggle_use_camera(bpy.types.Operator):
 
 
 
-class RENDER_OT_render_custom_resolution(bpy.types.Operator):
+class JB_MULTICAM_OT_render_custom_resolution(bpy.types.Operator):
 	bl_idname = "render.render_still_with_custom_resolution"
 	bl_label = "Render Camera"
 	bl_description = "Will use Costum Resolution if set"
@@ -921,7 +920,7 @@ def render_images(scene, cameras_to_render):
 	
 	
 
-class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
+class JB_MULTICAM_OT_clear_custom_resolution(bpy.types.Operator):
 	bl_idname = "camera_list.clear_scene_resolution"
 	bl_label = "Clear Custom Dimensions"
 	bl_description = "Restores the Camera to default dimensions. Shift+Click to restore all Cameras"
@@ -975,7 +974,7 @@ class CAMERA_LIST_OT_clear_custom_resolution(bpy.types.Operator):
 
 
 # Confirmation dialog box
-class RENDER_OT_confirm_dialog_render_all(bpy.types.Operator):
+class JB_MULTICAM_OT_confirmation_dialog_render_all(bpy.types.Operator):
 	bl_idname = "render.confirm_dialog_all_cameras"
 	bl_label = "RENDER ALL CAMERAS"
 	bl_description = "Render all Cameras in the Scene"
@@ -1011,7 +1010,7 @@ class RENDER_OT_confirm_dialog_render_all(bpy.types.Operator):
 		col.label(text=f"Proceed to render all Cameras?")  # Add another line of text here
 
 # Confirmation dialog box
-#class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
+#class JB_MULTICAM_OT_confirmation_dialog_render_selected(bpy.types.Operator):
 #	bl_idname = "render.confirm_dialog_selected_cameras"
 #	bl_label = "Start rendering selected cameras?"
 #
@@ -1022,7 +1021,7 @@ class RENDER_OT_confirm_dialog_render_all(bpy.types.Operator):
 #	def invoke(self, context, event):
 #		return context.window_manager.invoke_props_dialog(self)
 
-class RENDER_OT_confirm_dialog_render_selected(bpy.types.Operator):
+class JB_MULTICAM_OT_confirmation_dialog_render_selected(bpy.types.Operator):
 		bl_idname = "render.confirm_dialog_selected_cameras"
 		bl_label = "RENDER SELECTED CAMERAS"
 		bl_description = "Render only Cameras that are Selected in the list above"
@@ -1215,33 +1214,30 @@ def update_multiresolution_camera_frame(scene):
 
 
 classes = (
-	CameraListProperties,
-	CameraItemProperties,
+	JB_MULTICAM_PG_CAMERALIST_HighlightTooltip,
+	JB_MULTICAM_PG_CAMERALIST_CameraItem,
 
-	CAMERA_LIST_PT_render_panel,
-	CAMERA_UL_custom_resolution_camera_list,
+	JB_MULTICAM_PT_camera_list,
+	JB_MULTICAM_UL_CAMERALIST_TEMPLATE_camera_list_item,
 	
-	CAMERA_LIST_OT_clear_custom_resolution,
-	CAMERA_LIST_clear_custom_render_size,
-	CAMERA_LIST_OT_toggle_use_camera,
-	CAMERA_LIST_OT_select_camera,
-	CAMERA_LIST_OT_highlight_and_select_camera,
-	CAMERA_LIST_OT_initialize_camera_list,
-	CAMERA_LIST_PT_extra_features,
+	JB_MULTICAM_OT_clear_custom_resolution,
+	JB_MULTICAM_OT_CAMERALIST_clear_custom_render_size,
+	JB_MULTICAM_OT_CAMERALIST_toggle_use_camera,
+	JB_MULTICAM_OT_CAMERALIST_select_camera,
+	JB_MULTICAM_OT_CAMERALIST_highlight_and_select_camera,
+	JB_MULTICAM_OT_initialize_camera_list,
+	JB_MULTICAM_PT_addon_settings,
 	
-	PROCESS_OT_all_cameras,
+	JB_MULTICAM_OT_render_custom_resolution,
+	JB_MULTICAM_OT_confirmation_dialog_render_all,
+	JB_MULTICAM_OT_confirmation_dialog_render_selected,
 
-	RENDER_OT_render_custom_resolution,
-	RENDER_OT_confirm_dialog_render_all,
-	RENDER_OT_confirm_dialog_render_selected,
-
-	OBJECT_OT_refresh_visbility_of_objects_in_scene,
+	JB_MULTICAM_OT_update_viewport_visibility,
 	
-	CAMERA_OT_RenderAnimations,
-	CAMERA_LIST_PT_animation_buttons,
-	CAMERA_OT_RenderSceneCameraFramesWithCustomResolution,
-	CAMERA_OT_ProcessCameraRanges,
-	
+	JB_MULTICAM_OT_render_animation_sequence,
+	JB_MULTICAM_PT_animation_panel,
+	JB_MULTICAM_OT_render_current_scene_camera_with_custom_resolution,
+	JB_MULTICAM_OT_update_frame_ranges_for_all_cameras,
 )
 
 
@@ -1273,10 +1269,10 @@ def register():
 	for cls in classes:
 		bpy.utils.register_class(cls)
 
-	bpy.types.Scene.camera_list = bpy.props.PointerProperty(type=CameraListProperties)
+	bpy.types.Scene.camera_list = bpy.props.PointerProperty(type=JB_MULTICAM_PG_CAMERALIST_HighlightTooltip)
 
 	bpy.types.Scene.cameras = bpy.props.CollectionProperty(
-		type=CameraItemProperties,
+		type=JB_MULTICAM_PG_CAMERALIST_CameraItem,
 		 description="List of properties for each camera in the scene")
 		 
 	bpy.types.Scene.passepartout_width = bpy.props.IntProperty(
@@ -1309,6 +1305,7 @@ def register():
 def unregister():
 	for cls in classes:
 		bpy.utils.unregister_class(cls)
+		
 	del bpy.types.Scene.camera_list
 	del bpy.types.Scene.cameras
 	
