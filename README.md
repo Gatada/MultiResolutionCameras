@@ -71,7 +71,9 @@ Let me quickly explain each option:
 
 ## Animation Panel
 
-If you are working on a multi-camera sequence and need to quickly see it animated directly in your 3D Viewport, this panel is for you:
+The top button in the panel will allow you to render the current Scene Camera animation sequence with the associated custom resolution.
+
+Additionally, if you are working on a multi-camera sequence and need to quickly see it animated directly in your 3D Viewport, the rest of this panel is for you:
 
 1. **Preview Sequence**: When enabled, the current frame will determine which camera is the Scene Camera (the one being rendered). If you add one or many frame ranges to your camera names (ref. screenshot above), and make sure they are not overlapping, you will see the entire sequence in your 3D Viewport—no rendering required. Win!
 2. If you update the frame ranges of your cameras, you can manually refresh them by tapping the Refresh Frame Ranges button.
@@ -82,6 +84,12 @@ If you are working on a multi-camera sequence and need to quickly see it animate
 That's it! Thanks for checking out my first add-on for Blender. I have spend weeks on this, an so far it has turned into everything I wanted it to be—and then some. I'm very happy about it. I will probably keep adding features to it as I need them.
 
 I hope you find it useful!
+
+# Credits
+
+I integrated code from Artell to allow multi-camera sequences to be previewed in the 3D Viewport.
+
+Thanks to Ben Lindstrom (mouring) the add-on no longer crashes when rendering custom camera resolutions with Blender in the background, allowing Blender to render custom resolutions via scripting.
 
 All the best!\
 Johan
