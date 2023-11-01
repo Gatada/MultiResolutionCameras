@@ -8,7 +8,7 @@ This is a Blender add-on written to easily customize render resolutions, and ren
 
 But what makes the add-on cool is that you can preview the render right there in the viewport, as a frame is added to the camera which updates in real-time while you adjust the size and ratio of the render.
 
-It is a single file add-on. After installation, it appears here: `View3D > Sidebar [N] > Render Resolutions`
+It is a single file add-on. After installation, it appears here: `View3D > Sidebar [N] > Cameras`
 
 
 ![Custom Camera Resolution](https://user-images.githubusercontent.com/326334/228645249-619cb3b0-3934-496a-b817-aeb84345221b.png)
@@ -22,7 +22,7 @@ To install this add-on please follow these steps:
 1. Open Blender Preferences (CMD+comma on MacOS).
 1. Go to the **Add-ons** tab and click `Install`.
 1. Browse to the downloaded python script and select it.
-1. Enable the script, it is called: `3D View: Multi-Resolution Cameras`.
+1. Enable the script, it is called: `3D View: Multi-Resolution Toolbox`.
 
 
 ## Quick Overview
