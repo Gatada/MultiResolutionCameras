@@ -51,7 +51,7 @@ There is also two buttons:
 * **Render <Integer>**: Renders only the current subset of selected cameras in the custom resolution; tick the checkbox to include the camera in the set.
 * **Renders All**: Yep, you guessed it, this button renders all cameras in the scene with the custom resolution (if one is set).
 
-Using this button will render in the custom resolution is one is set, othewise default resolution will be used.
+Using this button will render in the custom resolution is one is set, otherwise default resolution will be used.
 
 Please note that changing the scene resolution will **not** automatically update the cameras with default resolution. Tap the wrench of the cameras that you want to update after a scene resolution change.
 
@@ -84,12 +84,13 @@ Additionally, if you are working on a multi-camera sequence and need to quickly 
 That's it! Thanks for checking out my first add-on for Blender. I have spend weeks on this, an so far it has turned into everything I wanted it to be—and then some. I'm very happy about it. I will probably keep adding features to it as I need them.
 
 I hope you find it useful!
+All the best!\
+Johan
 
-# Credits
+# Credits and Thanks
 
 I integrated code from Artell to allow multi-camera sequences to be previewed in the 3D Viewport.
 
 Thanks to Ben Lindstrom (mouring) the add-on no longer crashes when rendering custom camera resolutions with Blender in the background, allowing Blender to render custom resolutions via scripting.
 
-All the best!\
-Johan
+
