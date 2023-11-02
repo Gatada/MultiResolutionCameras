@@ -19,7 +19,7 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 1, 10),
+	"version": (3, 1, 11),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Manage and preview camera resolutions and animation sequences.",
@@ -207,7 +207,7 @@ class JB_MULTICAM_PT_animation_panel(bpy.types.Panel):
 			
 			render_box = self.layout.box()
 			render_box_row = render_box.row()
-			render_box_row.operator("camera.render_scene_camera_frames_with_custom_resolution", text="Render Scene Camera", icon="RENDER_ANIMATION")
+			render_box_row.operator("camera.render_scene_camera_frames_with_custom_resolution", text="Render Current Camera", icon="RENDER_ANIMATION")
 			
 			# ANIMATION PREVIEW BOX
 
