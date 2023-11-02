@@ -15,7 +15,7 @@ It is a single file add-on. After installation, it appears here: `View3D > Sideb
 ![Custom Camera Resolution](https://user-images.githubusercontent.com/326334/228645249-619cb3b0-3934-496a-b817-aeb84345221b.png)
 
 
-## Installation
+# Installation
 
 To install this add-on please follow these steps:
 
@@ -26,7 +26,7 @@ To install this add-on please follow these steps:
 1. Enable the script, it is called: `3D View: Multi-Resolution Toolbox`.
 
 
-## Camera List
+# Camera List
 
 ![Camera List](https://github.com/Gatada/MultiResolutionCameras/assets/326334/0169c09d-d1af-4a9d-9897-c9e0bcd0eec3)
 
@@ -49,13 +49,13 @@ Using this button will render in the custom resolution is one is set, otherwise 
 
 Please note that changing the scene resolution will **not** automatically update the cameras with default resolution. Tap the wrench of the cameras that you want to update after a scene resolution change.
 
-### How It Works
+## How It Works
 
 The plugin appends a property group (a data struct) to your file for each camera. The property group contains the name of the camera, index; X and Y dimensions, as well as the state of the checkbox. In other words, your file size will not be notably affected by the additional data.
 
 When you save the file, the data is retained—even if you uninstall the add-on. The data becomes part of the file. So you can share the file with others, and as long as they have the add-on installed, they will be able to render the different camera sizes.
 
-## Settings Panel
+# Settings Panel
 
 ![Settings](https://github.com/Gatada/MultiResolutionCameras/assets/326334/cbfc4018-f559-436f-87c1-2e4f7d8d178d)
 
@@ -66,7 +66,7 @@ Let me quickly explain each option:
 3. **Always show Render Border**: Enable this so you can see the render border even while selecting other objects in the scene, allowing you to compose the scene according to the custom render ratio—make sure your POV is where it should be.
 4. **Filename includes Resolution**: When experimenting with different resolutions, you can include it in the filename, so you can quickly tell them apart and not have different resolutions overwrite each other.
 
-## Animation Panel
+# Animation Panel
 
 ![Animation](https://github.com/Gatada/MultiResolutionCameras/assets/326334/3440dbf4-ce10-4be9-a614-914d3aff21cd)
 
