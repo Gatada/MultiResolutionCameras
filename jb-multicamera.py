@@ -207,7 +207,7 @@ class JB_MULTICAM_PT_animation_panel(bpy.types.Panel):
 			
 			render_box = self.layout.box()
 			render_box_row = render_box.row()
-			render_box_row.operator("camera.render_scene_camera_frames_with_custom_resolution", text="Render Current Camera", icon="RENDER_ANIMATION")
+			render_box_row.operator("camera.render_scene_camera_frames_with_custom_resolution", text="Render Active Camera", icon="RENDER_ANIMATION")
 			
 			# ANIMATION PREVIEW BOX
 
@@ -354,7 +354,7 @@ bpy.types.Scene.append_resolution = BoolProperty(
 
 bpy.types.Scene.is_previewing_animation = BoolProperty(
 	name="Use Camera Frameranges",
-	description="When enabled, Active Scene Camera is set according to Frame Range in Camera name (e.g.: Camera 1-10)",
+	description="When enabled, Scene Camera is selected/activated according to the Frame Range in their respective names (e.g.: Camera 1-10 for frame 1 to 10)",
 	default=False,
 	update=update_previewing_animation
 )
@@ -436,7 +436,7 @@ bpy.app.handlers.frame_change_pre.append(update_active_camera)
 class JB_MULTICAM_OT_render_current_scene_camera_with_custom_resolution(bpy.types.Operator):
 	bl_idname = "camera.render_scene_camera_frames_with_custom_resolution"
 	bl_label = "Render Scene Frames"
-	bl_description = "Renders the entire animation using the current Scene Camera in the associated custom resolution (if any)"
+	bl_description = "Renders the current Animation Range using the current Scene Camera (i.e. the active camera) in the associated (custom) resolution"
 	
 	def execute(self, context):
 		current_camera_name = context.scene.camera.name
