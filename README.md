@@ -1,12 +1,13 @@
-# Multi-Resolution Cameras for Blender
-This is a Blender add-on written to easily customize render resolutions, and render your cameras. With the add-on you can:
+# Multi-Resolution Camera Toolbox for Blender
+This is a Blender add-on written to easily customize render resolutions, and render your cameras—single frames and animations. With the add-on you can:
 
 * Set a custom render resolution for the cameras in the scene, without impacting the scene rendering resolution/aspect.
-* Easily render a still for a camera with the custom resolution.
-* Easily preview multi-camera animation sequences in the 3D Viewport.
-* Easily render sequences.
+* Render a still for a camera with its associated custom resolution.
+* Preview a multi-camera animation sequence in the 3D Viewport (you can even hide elements that are not enabled for rendering).
+* Render multi-camera animation sequences using either Cycles or Eevee.
+* Easily render the animation range for the active camera.
 
-But what makes the add-on cool is that you can preview the render right there in the viewport, as a frame is added to the camera which updates in real-time while you adjust the size and ratio of the render.
+But what makes the add-on cool is that you can **preview the render right there in the viewport**, as a frame is added to the camera which updates in real-time while you adjust the size and ratio of the render. This frame mesh is moved to each camera with custom resolution, following the current camera selection.
 
 It is a single file add-on. After installation, it appears here: `View3D > Sidebar [N] > Cameras`
 
@@ -25,17 +26,10 @@ To install this add-on please follow these steps:
 1. Enable the script, it is called: `3D View: Multi-Resolution Toolbox`.
 
 
-## Quick Overview
-
-![Features](https://github.com/Gatada/MultiResolutionCameras/assets/326334/b3ae944b-21c3-458a-89f6-c67be6473d9d)
-
-The add-on presents you with 3 panels under a new Cameras tab shown in your 3D Viewport:
-
-* **Camera List**: Shows your current cameras and allows you to customize.
-* **Settings Panel**: Preferences to customize this Add-on.
-* **Animation Panel**: A set of options and actions to help you easily preview and render multi-camera animation sequences.
-
 ## Camera List
+
+![Camera List](https://github.com/Gatada/MultiResolutionCameras/assets/326334/0169c09d-d1af-4a9d-9897-c9e0bcd0eec3)
+
 For each camera row you will find:
 
 1. Checkbox to create a subset of cameras. Tick the checkbox to include the camera. Shit+Click (or Opt+Click) to toggle all cameras.
@@ -62,6 +56,9 @@ The plugin appends a property group (a data struct) to your file for each camera
 When you save the file, the data is retained—even if you uninstall the add-on. The data becomes part of the file. So you can share the file with others, and as long as they have the add-on installed, they will be able to render the different camera sizes.
 
 ## Settings Panel
+
+![Settings](https://github.com/Gatada/MultiResolutionCameras/assets/326334/cbfc4018-f559-436f-87c1-2e4f7d8d178d)
+
 Let me quickly explain each option:
 
 1. **Highlight select Camera**: Now you can use the keys to navigate the list so update the Scene Camera and quickly verify the custom resolution of each camera.
@@ -71,7 +68,9 @@ Let me quickly explain each option:
 
 ## Animation Panel
 
-The top button in the panel will allow you to render the current Scene Camera animation sequence with the associated custom resolution.
+![Animation](https://github.com/Gatada/MultiResolutionCameras/assets/326334/3440dbf4-ce10-4be9-a614-914d3aff21cd)
+
+The top button in the panel will allow you to render the current Scene Camera animation range with its associated (custom) resolution.
 
 Additionally, if you are working on a multi-camera sequence and need to quickly see it animated directly in your 3D Viewport, the rest of this panel is for you:
 
