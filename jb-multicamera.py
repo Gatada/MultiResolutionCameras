@@ -19,7 +19,7 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 2, 2),
+	"version": (3, 2, 10),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Manage and preview camera resolutions and animation sequences.",
@@ -39,9 +39,64 @@ key_mesh = "Multi-Resolution Camera Mesh"
 key_passepartout = "Multi-Resolution Camera Frame"
 
 
+def on_highlighted_camera_index_update(self, context):
+	scene = context.scene	
+	if scene.move_focus_with_keys:
+		selected_row = scene.camera_list.highlighted_camera_index
+		selected_camera_item = context.scene.cameras[selected_row]
+		camera_name = selected_camera_item.name
+		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
+
+
+# Property callback function
+def update_previewing_animation(self, context):
+	if self.is_previewing_animation:
+		bpy.ops.camera.process_frame_ranges()
+
+bpy.types.Object.y_dim = bpy.props.IntProperty(
+	name="Height",
+	description="Enter a positive integer value for the height",
+	default=1,
+	min=1,
+	soft_max=10000,
+)
+
+bpy.types.Scene.cameras_with_frame_range = []
+
+bpy.types.Scene.move_focus_with_keys = BoolProperty(
+		name="Camera Follows Highlight",
+		description="Highlight selects Camera",
+		default=False
+	)
+	
+bpy.types.Scene.adjust_lens_clip = BoolProperty(
+	name="Adjust Lens Clip",
+	description="Adjust Lens Clip to show Render Border",
+	default=False
+)
+
+bpy.types.Scene.always_show_render_border = BoolProperty(
+	name="Always show Render Border",
+	description="Prevents Render Border from auto-hiding",
+	default=False
+)
+
+bpy.types.Scene.append_resolution = BoolProperty(
+	name="Filename includes Resolution",
+	description="Append render resolution to filename",
+	default=False
+)
+
+bpy.types.Scene.is_previewing_animation = BoolProperty(
+	name="Use Camera Frameranges",
+	description="When enabled, Scene Camera is selected/activated according to the Frame Range in their respective names (e.g.: Camera 1-10 for frame 1 to 10)",
+	default=False,
+	update=update_previewing_animation
+)
+
 bpy.types.Scene.objects_visibility_refresh_is_needed = BoolProperty(
 	name="Visibility Update",
-	description="The need to update the Visibility State of Objects in Scene",
+	description="The need to update the Visibility State of Objects in Scene. Only relevant if Preview Sequence is enabled",
 	default=False
 )
 
@@ -311,36 +366,7 @@ class JB_MULTICAM_PT_addon_settings(bpy.types.Panel):
 # 	# Your code to handle the "Adjust render size (keeping aspect ratio)" checkbox logic
 # 	pass
 
-bpy.types.Scene.move_focus_with_keys = BoolProperty(
-		name="Camera Follows Highlight",
-		description="Highlight selects Camera",
-		default=False
-	)
-	
-bpy.types.Scene.adjust_lens_clip = BoolProperty(
-	name="Adjust Lens Clip",
-	description="Adjust Lens Clip to show Render Border",
-	default=False
-)
 
-bpy.types.Scene.always_show_render_border = BoolProperty(
-	name="Always show Render Border",
-	description="Prevents Render Border from auto-hiding",
-	default=False
-)
-
-bpy.types.Scene.append_resolution = BoolProperty(
-	name="Filename includes Resolution",
-	description="Append render resolution to filename",
-	default=False
-)
-
-bpy.types.Scene.is_previewing_animation = BoolProperty(
-	name="Use Camera Frameranges",
-	description="When enabled, Scene Camera is selected/activated according to the Frame Range in their respective names (e.g.: Camera 1-10 for frame 1 to 10)",
-	default=False,
-	update=update_previewing_animation
-)
 
 # bpy.types.Scene.adjust_render_size = BoolProperty(
 # 	name="Adjust render size",
@@ -395,8 +421,6 @@ bpy.types.Scene.is_previewing_animation = BoolProperty(
 # 		return {'FINISHED'}
 
 
-# Custom property to track the state of the "Preview Animation" button
-bpy.types.Scene.cameras_with_frame_range = []
 
 
 
@@ -587,14 +611,6 @@ class JB_MULTICAM_PT_camera_list(bpy.types.Panel):
 		
 		
 
-bpy.types.Object.y_dim = bpy.props.IntProperty(
-			name="Height",
-			description="Enter a positive integer value for the height",
-			default=1,
-			min=1,
-			soft_max=10000,
-		)
-		
 
 
 
@@ -1052,12 +1068,6 @@ def update_active_camera(scene, dummy):
 bpy.app.handlers.frame_change_pre.append(update_active_camera)
 
 
-# Property callback function
-def update_previewing_animation(self, context):
-	if self.is_previewing_animation:
-		bpy.ops.camera.process_frame_ranges()
-
-
 def update_ui_if_needed(context):
 	# Prevents updates of the GUI when Blender is launched via a script, 
 	# or is in any other way in the background.	
@@ -1065,13 +1075,7 @@ def update_ui_if_needed(context):
 		context.area.tag_redraw()
 
 
-def on_highlighted_camera_index_update(self, context):
-	scene = context.scene	
-	if scene.move_focus_with_keys:
-		selected_row = scene.camera_list.highlighted_camera_index
-		selected_camera_item = context.scene.cameras[selected_row]
-		camera_name = selected_camera_item.name
-		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
+
 
 
 @persistent
@@ -1171,29 +1175,6 @@ def resize_passepartout(camera, width, height):
 	return passepartout
 
 
-def move_frame_mesh_to_active_camera_collection():
-	# Get the active camera
-	active_camera = bpy.context.scene.camera
-	
-	if active_camera:
-		# Find the frame mesh object
-		frame_mesh = bpy.data.objects.get("Frame_Mesh")  # Replace "Frame_Mesh" with the actual name
-	
-		if frame_mesh:
-			# Get the collection of the active camera
-			camera_collection = active_camera.users_collection[0] if active_camera.users_collection else None
-	
-			if camera_collection:
-				# Move the frame mesh to the camera's collection
-				if frame_mesh.users_collection:
-					current_collection = frame_mesh.users_collection[0]
-					if current_collection != camera_collection:
-						current_collection.objects.unlink(frame_mesh)
-						camera_collection.objects.link(frame_mesh)
-				else:
-					camera_collection.objects.link(frame_mesh)
-
-
 @persistent
 def update_multiresolution_camera_frame(scene):
 	# Get the active object and check if it is a camera
@@ -1230,8 +1211,7 @@ def update_multiresolution_camera_frame(scene):
 		else:
 			# Hiding passepartout since the selected camera does not have custom dimensions
 			if passepartout:
-				passepartout.hide_viewport = True
-			
+				passepartout.hide_viewport = True			
 					
 		# Parent the passepartout to the selected camera
 		if passepartout:
@@ -1239,7 +1219,7 @@ def update_multiresolution_camera_frame(scene):
 			passepartout.matrix_world = selected_camera.matrix_world
 
 			# Moving the frame mesh to the camera's collection to prevent it from being hidden:
-			# Done by unlinking the passepartout from other collections
+			# Unlinking the passepartout from other collections and adding it to current
 			
 			camera_collection = selected_camera.users_collection[0] if selected_camera.users_collection else None
 			if camera_collection:
@@ -1247,22 +1227,16 @@ def update_multiresolution_camera_frame(scene):
 					current_collection = passepartout.users_collection[0]
 					if current_collection != camera_collection:
 						
-						# Yes, the passepartout was linked to the wrong collection,
-						# relinking it:
+						# Yes, the passepartout was linked to another collection,
+						# relinking it to ensure its visibility:
 						
 						current_collection.objects.unlink(passepartout)
 						camera_collection.objects.link(passepartout)
-				else:
-					
-					# Camera was not linke to any collection?
-					# Linking it now.
-					# But is this really necessary?
-					
+				else:					
+					# First time linking the passepartout to a collection
 					camera_collection.objects.link(passepartout)
 
-	else:
-		# Hide the passepartout if no camera is selected and the user wants it hidden
-		if passepartout and not bpy.context.scene.always_show_render_border:
+	elif passepartout and not bpy.context.scene.always_show_render_border:
 			passepartout.hide_viewport = True
 
 
@@ -1303,6 +1277,7 @@ def update_objects_visibility_if_needed(context):
 			for obj in context.scene.objects:
 				obj.hide_set(False)
 
+
 @persistent
 def frame_change_handler(self, context):
 	# Only called when the frame changes.
@@ -1311,11 +1286,13 @@ def frame_change_handler(self, context):
 		update_objects_visibility_if_needed(bpy.context)
 		context.scene.objects_visibility_refresh_is_needed = False
 
+
 def show_only_render_was_updated(self, context):
 		# Only called when context.scene.sor_show_only_render changes
 		context.scene.objects_visibility_refresh_is_needed = True
 		update_objects_visibility_if_needed(bpy.context)
 		context.scene.objects_visibility_refresh_is_needed = False
+
 
 def register():
 	
