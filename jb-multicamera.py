@@ -1,6 +1,6 @@
 # THE MULTI-CAMERA TOOLBOX ADD-ON
 #
-# Developed March-Aug 2023 by Johan Basberg
+# Initial release developed March-Aug 2023 by Johan Basberg, and maintained since then.
 #
 # Various functions I needed for my own animation projects, which often would
 # require multiple cameras in a single scene, as well as cameras rendering at
@@ -19,7 +19,7 @@
 bl_info = {
 	"name": "Multi-Camera Toolbox",
 	"author": "Johan Basberg, including code from Artell",
-	"version": (3, 1, 11),
+	"version": (3, 2, 2),
 	"blender": (3, 6, 1),
 	"location": "3D Viewport > Sidebar [N] > Cameras",
 	"description": "Manage and preview camera resolutions and animation sequences.",
@@ -44,18 +44,6 @@ bpy.types.Scene.objects_visibility_refresh_is_needed = BoolProperty(
 	description="The need to update the Visibility State of Objects in Scene",
 	default=False
 )
-
-def update_ui_if_needed(context):
-	if not bpy.app.background:
-		context.area.tag_redraw()
-
-def on_highlighted_camera_index_update(self, context):
-	scene = context.scene	
-	if scene.move_focus_with_keys:
-		selected_row = scene.camera_list.highlighted_camera_index
-		selected_camera_item = context.scene.cameras[selected_row]
-		camera_name = selected_camera_item.name
-		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
 
 
 class JB_MULTICAM_PG_CAMERALIST_HighlightTooltip(bpy.types.PropertyGroup):
@@ -322,11 +310,6 @@ class JB_MULTICAM_PT_addon_settings(bpy.types.Panel):
 # def update_render_size(self, context):
 # 	# Your code to handle the "Adjust render size (keeping aspect ratio)" checkbox logic
 # 	pass
-	
-# Property callback function
-def update_previewing_animation(self, context):
-	if self.is_previewing_animation:
-		bpy.ops.camera.process_frame_ranges()
 
 bpy.types.Scene.move_focus_with_keys = BoolProperty(
 		name="Camera Follows Highlight",
@@ -415,19 +398,6 @@ bpy.types.Scene.is_previewing_animation = BoolProperty(
 # Custom property to track the state of the "Preview Animation" button
 bpy.types.Scene.cameras_with_frame_range = []
 
-# Frame change handler to update active camera during animation playback
-@persistent
-def update_active_camera(scene, dummy):
-	if scene.is_previewing_animation:
-		frame = scene.frame_current
-
-		# Check if the current frame is within the frame range of any camera
-		for camera, start_frame, end_frame in scene.cameras_with_frame_range:
-			if start_frame <= frame <= end_frame:
-				scene.camera = camera
-				break
-
-bpy.app.handlers.frame_change_pre.append(update_active_camera)
 
 
 
@@ -625,10 +595,6 @@ bpy.types.Object.y_dim = bpy.props.IntProperty(
 			soft_max=10000,
 		)
 		
-def get_selected_camera_count():
-		selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering]
-		camera_count = len(selected_camera_items)
-		return f"Render {camera_count}"
 
 
 
@@ -843,80 +809,7 @@ class JB_MULTICAM_OT_render_custom_resolution(bpy.types.Operator):
 		return {'FINISHED'}
 
 
-def render_images(scene, cameras_to_render):
-	
-	# Retain original camera details
-	original_camera = scene.camera
-	original_resolution_x = scene.render.resolution_x
-	original_resolution_y = scene.render.resolution_y
-			
-	# get output path
-	file_path = bpy.path.abspath(scene.render.filepath)
-	file_dir = os.path.dirname(file_path)
-	if not file_dir:
-		file_dir = bpy.path.abspath("//")
-	
-	# Starting state
-	render_progress = 1 # Yeah, feels right to start on 1.
-	number_of_cameras_to_render = len(cameras_to_render)
-	start_time = time.time()
-	
-	# Render each camera with custom resolution, or default resolution if not set
-	for camera_data in cameras_to_render:
-	
-		camera = bpy.data.objects.get(camera_data.name)
-		if not camera:
-			self.report({'WARNING'}, f"Camera {camera_data.name} not found")
-			continue
-			
-		# set camera as active
-		scene.camera = camera
-		
-		# set resolution
-		scene.render.resolution_x = camera_data.x_dim
-		scene.render.resolution_y = camera_data.y_dim
-		
-		# set output path
-		if bpy.context.scene.append_resolution:
-			camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
-		else:
-			camera_file_path = os.path.join(file_dir, f"{camera_data.name}.png")			
-		scene.render.filepath = bpy.path.ensure_ext(camera_file_path, ".png")
-		
-		print(f"\nRendering {render_progress} of {number_of_cameras_to_render}: \"{camera.name}\". Interface will become unresponsive.")
-		
-		# render
-		bpy.ops.render.render(write_still=True)
-					
-		render_progress += 1
-	
-	# Done Rendering
-	
-	# Restore original camera and resolution
-	scene.camera = original_camera
-	scene.render.resolution_x = original_resolution_x
-	scene.render.resolution_y = original_resolution_y
-	
-	# Record the end time
-	end_time = time.time()
-	
-	# Calculate the time taken in seconds
-	time_taken = end_time - start_time
-	
-	# Convert the time taken to hours, minutes, and seconds
-	hours, rem = divmod(time_taken, 3600)
-	minutes, seconds = divmod(rem, 60)
-	
-	# Display the time taken in hours, minutes, and seconds format
-	formatted_time = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
-	print("\nTotal time taken for rendering: ", formatted_time)
-	
-	if len(cameras_to_render) == 1:
-		return f"Rendered camera to {file_dir}"
-	else:
-		return f"Rendered {number_of_cameras_to_render} cameras to {file_dir}"
-	
-	
+
 	
 	
 
@@ -1063,6 +956,123 @@ class JB_MULTICAM_OT_confirmation_dialog_render_selected(bpy.types.Operator):
 			col.label(text=f"Proceed to render {camera_count} cameras?")  # Add another line of text here
 
 
+def render_images(scene, cameras_to_render):
+	
+	# Retain original camera details
+	original_camera = scene.camera
+	original_resolution_x = scene.render.resolution_x
+	original_resolution_y = scene.render.resolution_y
+			
+	# get output path
+	file_path = bpy.path.abspath(scene.render.filepath)
+	file_dir = os.path.dirname(file_path)
+	if not file_dir:
+		file_dir = bpy.path.abspath("//")
+	
+	# Starting state
+	render_progress = 1 # Yeah, feels right to start on 1.
+	number_of_cameras_to_render = len(cameras_to_render)
+	start_time = time.time()
+	
+	# Render each camera with custom resolution, or default resolution if not set
+	for camera_data in cameras_to_render:
+	
+		camera = bpy.data.objects.get(camera_data.name)
+		if not camera:
+			self.report({'WARNING'}, f"Camera {camera_data.name} not found")
+			continue
+			
+		# set camera as active
+		scene.camera = camera
+		
+		# set resolution
+		scene.render.resolution_x = camera_data.x_dim
+		scene.render.resolution_y = camera_data.y_dim
+		
+		# set output path
+		if bpy.context.scene.append_resolution:
+			camera_file_path = os.path.join(file_dir, f"{camera_data.name} {camera_data.x_dim} × {camera_data.y_dim}.png")
+		else:
+			camera_file_path = os.path.join(file_dir, f"{camera_data.name}.png")			
+		scene.render.filepath = bpy.path.ensure_ext(camera_file_path, ".png")
+		
+		print(f"\nRendering {render_progress} of {number_of_cameras_to_render}: \"{camera.name}\". Interface will become unresponsive.")
+		
+		# render
+		bpy.ops.render.render(write_still=True)
+					
+		render_progress += 1
+	
+	# Done Rendering
+	
+	# Restore original camera and resolution
+	scene.camera = original_camera
+	scene.render.resolution_x = original_resolution_x
+	scene.render.resolution_y = original_resolution_y
+	
+	# Record the end time
+	end_time = time.time()
+	
+	# Calculate the time taken in seconds
+	time_taken = end_time - start_time
+	
+	# Convert the time taken to hours, minutes, and seconds
+	hours, rem = divmod(time_taken, 3600)
+	minutes, seconds = divmod(rem, 60)
+	
+	# Display the time taken in hours, minutes, and seconds format
+	formatted_time = "{:0>2}:{:0>2}:{:05.2f}".format(int(hours), int(minutes), seconds)
+	print("\nTotal time taken for rendering: ", formatted_time)
+	
+	if len(cameras_to_render) == 1:
+		return f"Rendered camera to {file_dir}"
+	else:
+		return f"Rendered {number_of_cameras_to_render} cameras to {file_dir}"
+	
+
+def get_selected_camera_count():
+	selected_camera_items = [camera_item for camera_item in bpy.context.scene.cameras if camera_item.selected_for_rendering]
+	camera_count = len(selected_camera_items)
+	return f"Render {camera_count}"
+
+
+# Frame change handler to update active camera during animation playback
+@persistent
+def update_active_camera(scene, dummy):
+	if scene.is_previewing_animation:
+		frame = scene.frame_current
+
+		# Check if the current frame is within the frame range of any camera
+		for camera, start_frame, end_frame in scene.cameras_with_frame_range:
+			if start_frame <= frame <= end_frame:
+				scene.camera = camera
+				break
+
+
+bpy.app.handlers.frame_change_pre.append(update_active_camera)
+
+
+# Property callback function
+def update_previewing_animation(self, context):
+	if self.is_previewing_animation:
+		bpy.ops.camera.process_frame_ranges()
+
+
+def update_ui_if_needed(context):
+	# Prevents updates of the GUI when Blender is launched via a script, 
+	# or is in any other way in the background.	
+	if not bpy.app.background:
+		context.area.tag_redraw()
+
+
+def on_highlighted_camera_index_update(self, context):
+	scene = context.scene	
+	if scene.move_focus_with_keys:
+		selected_row = scene.camera_list.highlighted_camera_index
+		selected_camera_item = context.scene.cameras[selected_row]
+		camera_name = selected_camera_item.name
+		bpy.ops.scene.select_camera(camera_name=camera_name, row_index=selected_row)
+
 
 @persistent
 def populate_camera_list(scene, depsgraph=None):
@@ -1161,6 +1171,27 @@ def resize_passepartout(camera, width, height):
 	return passepartout
 
 
+def move_frame_mesh_to_active_camera_collection():
+	# Get the active camera
+	active_camera = bpy.context.scene.camera
+	
+	if active_camera:
+		# Find the frame mesh object
+		frame_mesh = bpy.data.objects.get("Frame_Mesh")  # Replace "Frame_Mesh" with the actual name
+	
+		if frame_mesh:
+			# Get the collection of the active camera
+			camera_collection = active_camera.users_collection[0] if active_camera.users_collection else None
+	
+			if camera_collection:
+				# Move the frame mesh to the camera's collection
+				if frame_mesh.users_collection:
+					current_collection = frame_mesh.users_collection[0]
+					if current_collection != camera_collection:
+						current_collection.objects.unlink(frame_mesh)
+						camera_collection.objects.link(frame_mesh)
+				else:
+					camera_collection.objects.link(frame_mesh)
 
 
 @persistent
@@ -1202,13 +1233,35 @@ def update_multiresolution_camera_frame(scene):
 				passepartout.hide_viewport = True
 			
 					
-		# Link the passepartout to the selected camera
+		# Parent the passepartout to the selected camera
 		if passepartout:
 			passepartout.parent = selected_camera
 			passepartout.matrix_world = selected_camera.matrix_world
 
+			# Moving the frame mesh to the camera's collection to prevent it from being hidden:
+			# Done by unlinking the passepartout from other collections
+			
+			camera_collection = selected_camera.users_collection[0] if selected_camera.users_collection else None
+			if camera_collection:
+				if passepartout.users_collection:
+					current_collection = passepartout.users_collection[0]
+					if current_collection != camera_collection:
+						
+						# Yes, the passepartout was linked to the wrong collection,
+						# relinking it:
+						
+						current_collection.objects.unlink(passepartout)
+						camera_collection.objects.link(passepartout)
+				else:
+					
+					# Camera was not linke to any collection?
+					# Linking it now.
+					# But is this really necessary?
+					
+					camera_collection.objects.link(passepartout)
+
 	else:
-		# Hide the passepartout if no camera is selected - and the user wants it hidden
+		# Hide the passepartout if no camera is selected and the user wants it hidden
 		if passepartout and not bpy.context.scene.always_show_render_border:
 			passepartout.hide_viewport = True
 
